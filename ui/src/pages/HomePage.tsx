@@ -33,6 +33,12 @@ const PLAYER_ARCHETYPES: Array<{
 const MAP_TEMPLATES: MapTemplate[] = ["BASE", "MINI", "TOURNAMENT"];
 const PLAYER_COLORS = ["RED", "BLUE", "ORANGE", "WHITE"] as const;
 
+const MAP_META: Record<MapTemplate, { desc: string }> = {
+  BASE: { desc: "Classic 19 hexes" },
+  MINI: { desc: "Compact 7 hexes" },
+  TOURNAMENT: { desc: "Balanced pros" },
+};
+
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [mapTemplate, setMapTemplate] = useState<MapTemplate>("BASE");
@@ -98,9 +104,19 @@ export default function HomePage() {
     <div className="home-page">
       <div className="home-page__inner">
         <h1 className="logo">Catanatron</h1>
-        {!loading ? (
+          {!loading ? (
           <div className="setup-card">
-            <p className="setup-note">Open hands. Random discard choice.</p>
+            <div className="hero-row">
+              <span className="hero-thumb" aria-hidden>
+                <span className="mini-hex wood" />
+                <span className="mini-hex brick" />
+                <span className="mini-hex wheat" />
+              </span>
+              <div>
+                <p className="setup-note" style={{ margin: 0, textAlign: "left" }}>Play like Colonist — fast, tactile, vs bots</p>
+                <small style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.72rem" }}>Open hands • Dice animations • Cost strip • Harbor trading</small>
+              </div>
+            </div>
 
             <div className="control-group">
               <div className="control-header">
@@ -113,11 +129,17 @@ export default function HomePage() {
                     key={value}
                     variant="contained"
                     onClick={() => setMapTemplate(value)}
-                    className={`choice-button ${
+                    className={`choice-button map-${value.toLowerCase()} ${
                       mapTemplate === value ? "selected" : ""
                     }`}
                   >
-                    {value}
+                    <span className="map-thumb small" aria-hidden>
+                      <span className={`mini-hex ${value === "MINI" ? "sheep" : "wood"}`} />
+                      <span className={`mini-hex ${value === "TOURNAMENT" ? "ore" : "brick"}`} />
+                      <span className={`mini-hex ${value === "BASE" ? "wheat" : "wood"}`} />
+                    </span>
+                    <span className="map-label">{value}</span>
+                    <small className="map-desc">{MAP_META[value].desc}</small>
                   </Button>
                 ))}
               </div>

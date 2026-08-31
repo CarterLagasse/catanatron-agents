@@ -27,7 +27,7 @@ function computeDefaultSize(divWidth: number, divHeight: number): number {
     const maxSizeThatRespectsWidth = divWidth / numLevels / SQRT3;
     size = maxSizeThatRespectsWidth;
   }
-  return size;
+  return size; // CSS padding on .board-container handles sand rim consistently
 }
 
 type BoardProps = {
@@ -61,9 +61,13 @@ export default function Board({
   isMovingRobber,
   robberCoordinates,
 }: BoardProps) {
-  // TODO: Keep in sync with CSS
-  const containerHeight = height - 144 - 38 - 40;
-  const containerWidth = isMobile ? width - 280 : width;
+  // Board container is .board-container (border-radius 18, inset shadow) - JS keeps in sync via window size minus toolbars/drawers
+  // Note: .board-container has 8px padding for sand rim, so subtract 16px from each dimension
+  const TOOLBAR_HEIGHT = 132; // .state-summary 68 + .actions-toolbar 64
+  const HEADER_HEIGHT = 48;
+  const DRAWER_OFFSET = isMobile ? 0 : 280;
+  const containerHeight = Math.max(360, height - TOOLBAR_HEIGHT - HEADER_HEIGHT - 24 - 16);
+  const containerWidth = Math.max(360, width - DRAWER_OFFSET - 24 - 16);
   const center: [number, number] = [containerWidth / 2, containerHeight / 2];
   const size = computeDefaultSize(containerWidth, containerHeight);
   if (!size) {
@@ -118,8 +122,40 @@ export default function Board({
       />
     )
   );
+
+  // Island: 19 background hexes behind land tiles (3-4-5-4-3), then white + blue beach rims
+  const landTiles = gameState.tiles.filter(({ tile }) => tile.type === "RESOURCE_TILE" || tile.type === "DESERT");
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const vertAngles = [-30, 30, 90, 150, 210, 270];
+  const hexPoly = (cx: number, cy: number, r: number) =>
+    vertAngles.map((a) => `${cx + r * Math.cos(toRad(a))},${cy + r * Math.sin(toRad(a))}`).join(" ");
+  const bgHexes = landTiles.map(({ coordinate }) => {
+    const q = coordinate[0];
+    const r = coordinate[2];
+    const cx = size * (SQRT3 * q + (SQRT3 / 2) * r) + center[0];
+    const cy = size * (3 / 2) * r + center[1];
+    return { key: `${coordinate}`, cx, cy };
+  });
+
   return (
     <div className={classnames("board", { show })}>
+      <svg
+        className="island"
+        aria-hidden
+        style={{ position: "absolute", left: 0, top: 0, width: containerWidth, height: containerHeight, pointerEvents: "none", zIndex: 0, overflow: "visible" }}
+        width={containerWidth}
+        height={containerHeight}
+      >
+        {bgHexes.map(({ key, cx, cy }) => (
+          <polygon key={`${key}-blue`} points={hexPoly(cx, cy, size * 1.15)} fill="#7ec8f0" stroke="none" />
+        ))}
+        {bgHexes.map(({ key, cx, cy }) => (
+          <polygon key={`${key}-white`} points={hexPoly(cx, cy, size * 1.08)} fill="#ffffff" stroke="none" />
+        ))}
+        {bgHexes.map(({ key, cx, cy }) => (
+          <polygon key={`${key}-sand`} points={hexPoly(cx, cy, size * 1.02)} fill="#f0d9a0" stroke="none" />
+        ))}
+      </svg>
       {tiles}
       {edges}
       {nodes}

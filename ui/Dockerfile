@@ -14,3 +14,5 @@ RUN npm install
 COPY . /app
 
 CMD ["npm", "start"]
+
+EXPOSE 4000

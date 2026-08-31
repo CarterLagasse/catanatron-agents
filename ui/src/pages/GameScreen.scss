@@ -48,7 +48,7 @@ main {
     text-align: center;
   }
 
-  background: variables.$black;
+  background: #164a8a; // ocean from goal.png
   color: white;
   height: 100%;
   display: flex;
@@ -96,22 +96,20 @@ main {
   }
 }
 
-// Medium screens - Left drawer permanent
+// Medium+ screens - Both drawers permanent (unified md breakpoint, fixes gap 600-960)
 @media (min-width: variables.$md-breakpoint) {
   main {
     padding-left: 280px;
+    padding-right: 280px;
     .board-container {
       margin-right: 0;
+      margin-left: 0;
     }
   }
 }
-
-// Large screens - Both drawers permanent
 @media (min-width: variables.$lg-breakpoint) {
   main {
-    padding-left: 0px;
-    .board-container {
-      margin-left: 140px;
-    }
+    padding-left: 280px;
+    padding-right: 280px;
   }
 }

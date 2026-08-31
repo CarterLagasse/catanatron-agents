@@ -90,7 +90,11 @@ type PortTile = {
   resource: ResourceCard;
 };
 
-export type Tile = ResourceTile | DesertTile | PortTile;
+type WaterTile = {
+  type: "WATER";
+};
+
+export type Tile = ResourceTile | DesertTile | PortTile | WaterTile;
 
 export type PlacedTile = {
   coordinate: TileCoordinate;

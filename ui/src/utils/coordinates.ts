@@ -9,6 +9,9 @@ type RadialCoordinate = {
   r: number;
 };
 
+export const SQRT3 = 1.73205080757;
+export const APOTHEM_FACTOR = SQRT3 / 2; // 0.8660254 for pointy-top hex
+
 // Gives center coordinate for tile.
 export function tilePixelVector(
   coordinate: CubeCoordinate,
@@ -27,7 +30,31 @@ export function cubeToAxial(cube: CubeCoordinate): RadialCoordinate {
   return { q: cube[0], r: cube[2] };
 }
 
-// TODO - why are EAST and WEST not included here?
+// Exact port position using hex geometry (apothem = size * SQRT3/2)
+export function calculatePortPosition(
+  direction: Direction,
+  size: number,
+  distFactor = 0.58
+): { x: number; y: number } {
+  const apothem = size * APOTHEM_FACTOR;
+  const dist = apothem * distFactor;
+  const angles: Record<Direction, number> = {
+    NORTH: -90,
+    NORTHEAST: -30,
+    SOUTHEAST: 30,
+    SOUTH: 90,
+    SOUTHWEST: 150,
+    NORTHWEST: -150,
+    EAST: 0,
+    WEST: 180,
+  };
+  const angle = (angles[direction] * Math.PI) / 180;
+  return {
+    x: dist * Math.cos(angle),
+    y: dist * Math.sin(angle),
+  };
+}
+
 export function getNodeDelta(direction: Direction, w: number, h: number) {
   switch (direction) {
     case "NORTH":
@@ -68,5 +95,3 @@ export function getEdgeTransform(direction: Direction, size: number) {
       throw Error("Unknown direction " + direction);
   }
 }
-
-export const SQRT3 = 1.73205080757;

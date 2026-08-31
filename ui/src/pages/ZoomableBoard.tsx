@@ -164,26 +164,42 @@ export default function ZoomableBoard({ replayMode }: ZoomableBoardProps) {
   if (!width || !height) return;
 
   return (
-    <TransformWrapper>
-      <div className="board-container">
-        <TransformComponent>
-          <Board
-            width={width}
-            height={height}
-            buildOnNodeClick={buildOnNodeClick}
-            buildOnEdgeClick={buildOnEdgeClick}
-            handleTileClick={handleTileClick}
-            nodeActions={nodeActions}
-            edgeActions={edgeActions}
-            replayMode={replayMode}
-            show={show}
-            gameState={gameState}
-            isMobile={isMobile}
-            isMovingRobber={state.isMovingRobber}
-            robberCoordinates={robberCoordinates}
-          />
-        </TransformComponent>
-      </div>
+    <TransformWrapper
+      minScale={0.55}
+      maxScale={2.4}
+      initialScale={1}
+      centerOnInit
+      limitToBounds={false}
+      wheel={{ step: 0.12 }}
+      doubleClick={{ mode: "reset" }}
+      panning={{ velocityDisabled: false }}
+    >
+      {({ zoomIn, zoomOut, resetTransform }) => (
+        <div className="board-container">
+          <div className="board-controls">
+            <button className="board-ctrl" onClick={() => zoomIn()} aria-label="Zoom in">+</button>
+            <button className="board-ctrl" onClick={() => zoomOut()} aria-label="Zoom out">−</button>
+            <button className="board-ctrl" onClick={() => resetTransform()} aria-label="Reset view">⟲</button>
+          </div>
+          <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }} contentStyle={{ width: "100%", height: "100%" }}>
+            <Board
+              width={width}
+              height={height}
+              buildOnNodeClick={buildOnNodeClick}
+              buildOnEdgeClick={buildOnEdgeClick}
+              handleTileClick={handleTileClick}
+              nodeActions={nodeActions}
+              edgeActions={edgeActions}
+              replayMode={replayMode}
+              show={show}
+              gameState={gameState}
+              isMobile={isMobile}
+              isMovingRobber={state.isMovingRobber}
+              robberCoordinates={robberCoordinates}
+            />
+          </TransformComponent>
+        </div>
+      )}
     </TransformWrapper>
   );
 }

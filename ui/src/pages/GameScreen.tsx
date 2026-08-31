@@ -16,6 +16,9 @@ import { type StateIndex, getState, postAction } from "../utils/apiClient";
 import { dispatchSnackbar } from "../components/Snackbar";
 import { getHumanColor } from "../utils/stateUtils";
 import AnalysisBox from "../components/AnalysisBox";
+import DiceRoll from "../components/DiceRoll";
+import PhaseBanner from "../components/PhaseBanner";
+import CostStrip from "../components/CostStrip";
 import { Divider } from "@mui/material";
 
 const ROBOT_THINKING_TIME = 300;
@@ -87,7 +90,12 @@ function GameScreen({ replayMode }: { replayMode: boolean }) {
   return (
     <main>
       <h1 className="logo">Catanatron</h1>
-      <ZoomableBoard replayMode={replayMode} />
+      <PhaseBanner isBotThinking={isBotThinking} />
+      <CostStrip />
+      <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <DiceRoll />
+        <ZoomableBoard replayMode={replayMode} />
+      </div>
       <ActionsToolbar isBotThinking={isBotThinking} replayMode={replayMode} />
       <LeftDrawer />
       <RightDrawer>

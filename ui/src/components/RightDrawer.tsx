@@ -37,7 +37,7 @@ export default function RightDrawer( { children }: PropsWithChildren ) {
 
   return (
     <>
-      <Hidden breakpoint={{ size: "lg", direction: "up" }} implementation="js">
+      <Hidden breakpoint={{ size: "md", direction: "up" }} implementation="js">
         <SwipeableDrawer
           className="right-drawer"
           anchor="right"

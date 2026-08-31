@@ -37,7 +37,7 @@ services:
   react-ui:
     build: ./ui
     ports:
-      - 3000:3000
+      - 4000:4000
     stdin_open: true
     volumes:
       - /app/node_modules

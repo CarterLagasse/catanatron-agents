@@ -18,10 +18,12 @@ import "./LeftDrawer.scss";
 function DrawerContent({ gameState }: { gameState: GameState }) {
   const playerSections = gameState.colors.map((color) => {
     const key = playerKey(gameState, color);
+    const isCurrent = gameState.current_color === color;
+    const decoratedState = { ...gameState.player_state, __isCurrent: isCurrent } as any;
     return (
       <React.Fragment key={color}>
         <PlayerStateBox
-          playerState={gameState.player_state}
+          playerState={decoratedState}
           playerKey={key}
           color={color}
         />
@@ -92,7 +94,7 @@ export default function LeftDrawer() {
         </SwipeableDrawer>
       </Hidden>
       <Hidden
-        breakpoint={{ size: "sm", direction: "down" }}
+        breakpoint={{ size: "md", direction: "down" }}
         implementation="css"
       >
         <Drawer className="left-drawer" anchor="left" variant="permanent" open>

@@ -3,39 +3,198 @@
 .number-token {
   --scale-factor: 0.65;
   --base-font-size: 100%;
-  height: 4ch;
-  width: 4ch;
+  height: 3.1rem;
+  width: 3.0rem;
   text-align: center;
-  padding: 5px;
-  line-height: 0.8rem;
+  padding: 3px 0 3px;
+  line-height: 1;
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-family: "Nunito", "Bungee Inline", sans-serif;
+  font-weight: 900;
+  font-size: 1.55rem;
+  letter-spacing: -0.02em;
+  background: #ffffff !important;
+  color: #1e3d1e !important; // dark green/black like goal
+  border: 1.8px solid #d9c49a;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.28),
+    0 1px 0 rgba(0,0,0,0.08),
+    inset 0 0 0 1px rgba(255,255,255,0.9);
+  // lowered to give icons room to move down
+  margin-top: 16px;
+  z-index: 2;
   .pips {
-    font-size: calc(var(--base-font-size) * 60%);
+    font-size: 0.52rem;
+    letter-spacing: 1.2px;
+    margin-top: 1px;
+    opacity: 1;
+    font-family: sans-serif;
+    font-weight: 800;
+    line-height: 1;
+    color: #1e3d1e;
   }
 
   &.number-token-red {
-    color: #ff5555;
+    color: #c62828 !important;
+    border-color: #e8b4b4;
+    .pips {
+      color: #c62828;
+    }
   }
 
   &.flashing {
-    animation: pulse 0.5s ease-in-out infinite alternate;
+    animation: pulse 0.7s ease-in-out infinite alternate;
     cursor: pointer;
+    border-color: #ffca28;
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.3),
+      0 0 14px rgba(255,202,40,0.85),
+      0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  &.blocked {
+    opacity: 0.55;
+    filter: grayscale(0.3);
   }
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 2px 0 #b8a684,
+      0 0 0 0 rgba(255, 213, 79, 0.0),
+      0 4px 8px rgba(0, 0, 0, 0.35);
   }
   100% {
-    box-shadow: 0 0 0 4px rgba(200, 200, 200, 0.6);
+    box-shadow:
+      0 2px 0 #b8a684,
+      0 0 0 10px rgba(255, 213, 79, 0.45),
+      0 6px 16px rgba(0, 0, 0, 0.45);
   }
 }
 
 @media (max-width: variables.$sm-breakpoint) {
   .number-token {
     --base-font-size: 75%;
+    height: 2.7rem;
+    width: 2.6rem;
+    font-size: 1.2rem;
+    margin-top: 10px;
   }
+}
+
+// Filled Catan hex is now solid color (background set inline) - keep old .port for backwards compat but not used
+.port {
+  display: none;
+}
+
+// Boat for port - beach harbor docked at island edge (moves with board)
+.port-boat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+  z-index: 5; // above island sand (z0) and tiles (z1)
+  svg { display: block; width: 36px; height: auto; }
+  .port-badge {
+    font-size: 0.58rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    color: #0d2a5a;
+    background: #ffffff;
+    border: 1.5px solid #0d2a5a;
+    border-radius: 999px;
+    padding: 1px 5px;
+    line-height: 1.1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+}
+
+// --- Catan terrain motifs (numbers lowered, icons moved down) ---
+.tile-motif {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  filter: drop-shadow(0 1.5px 2.5px rgba(0,0,0,0.35));
+  opacity: 1;
+  z-index: 1;
+}
+
+.motif {
+  width: 52px;
+  height: 36px;
+  background: no-repeat center / contain;
+  opacity: 1;
+  display: block;
+}
+
+// forest: pine raised to show stump
+.motif--wood {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 34'%3E%3Cpath d='M20 3 L14 12 L16.5 12 L11 20 L13.2 20 L8 28 L32 28 L26.8 20 L29 20 L23.5 12 L26 12 Z' fill='%230e3d14' stroke='%230a2e0f' stroke-width='1.1' stroke-linejoin='round'/%3E%3Crect x='18.2' y='28' width='3.6' height='5' fill='%235d4037' stroke='%233e2723' stroke-width='0.7'/%3E%3Cpath d='M10 32 Q11.5 28 13 32 M27 32 Q28.5 28 30 32 M18 33 Q20 29.5 22 33' stroke='%230e5a1a' stroke-width='0.9' fill='none' stroke-linecap='round' opacity='0.55'/%3E%3C/svg%3E");
+  width: 46px;
+  height: 38px;
+}
+// hills / brick: brick wall 3x3
+.motif--brick {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 30'%3E%3Crect x='6' y='6' width='10' height='6' rx='1' fill='%23c94a1a' stroke='%238a2f10' stroke-width='1'/%3E%3Crect x='18' y='6' width='10' height='6' rx='1' fill='%23d95a1e' stroke='%238a2f10' stroke-width='1'/%3E%3Crect x='10' y='13.2' width='10' height='6' rx='1' fill='%23d95a1e' stroke='%238a2f10' stroke-width='1'/%3E%3Crect x='22' y='13.2' width='10' height='6' rx='1' fill='%23c94a1a' stroke='%238a2f10' stroke-width='1'/%3E%3Crect x='6' y='20.4' width='10' height='6' rx='1' fill='%23d95a1e' stroke='%238a2f10' stroke-width='1'/%3E%3Crect x='18' y='20.4' width='10' height='6' rx='1' fill='%23d95a1e' stroke='%238a2f10' stroke-width='1'/%3E%3Cpath d='M9 28 Q12 25 14 28 M22 28 Q25 25 27 28' stroke='%238a2f10' stroke-width='0.7' fill='none' opacity='0.4'/%3E%3C/svg%3E");
+  width: 48px;
+  height: 34px;
+}
+// pasture / sheep: simple white cloud blob with tiny legs (goal-style)
+.motif--sheep {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 30'%3E%3Cg fill='%23ffffff' stroke='%23e0e0e0' stroke-width='0.8'%3E%3Ccircle cx='16' cy='14' r='7'/%3E%3Ccircle cx='24' cy='12' r='8'/%3E%3Ccircle cx='32' cy='14' r='7'/%3E%3Ccircle cx='20' cy='18' r='6'/%3E%3Ccircle cx='28' cy='18' r='6'/%3E%3C/g%3E%3Crect x='14' y='22' width='2' height='5' rx='1' fill='%233e2723'/%3E%3Crect x='20' y='22' width='2' height='5' rx='1' fill='%233e2723'/%3E%3Crect x='26' y='22' width='2' height='5' rx='1' fill='%233e2723'/%3E%3Crect x='32' y='22' width='2' height='5' rx='1' fill='%233e2723'/%3E%3C/svg%3E");
+  width: 56px;
+  height: 36px;
+}
+// fields / wheat: sheaf of 3 stalks
+.motif--wheat {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 32'%3E%3Cpath d='M20 26 V12' stroke='%23a86a0a' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M14 26 V15' stroke='%23a86a0a' stroke-width='1.3'/%3E%3Cpath d='M26 26 V15' stroke='%23a86a0a' stroke-width='1.3'/%3E%3Cellipse cx='20' cy='9' rx='3' ry='4' fill='%23f0b615' stroke='%23a86a0a' stroke-width='0.9'/%3E%3Cellipse cx='14' cy='11.5' rx='2.6' ry='3.4' fill='%23f6a03f' stroke='%23a86a0a' stroke-width='0.8'/%3E%3Cellipse cx='26' cy='11.5' rx='2.6' ry='3.4' fill='%23f6a03f' stroke='%23a86a0a' stroke-width='0.8'/%3E%3Cpath d='M8 28 Q14 24 20 28 Q26 30 32 28' stroke='%23a86a0a' stroke-width='0.7' fill='none' opacity='0.35'/%3E%3C/svg%3E");
+  width: 50px;
+  height: 36px;
+}
+// mountains / ore: mountain range with small snow caps (not half peak)
+.motif--ore {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 28'%3E%3Cpath d='M4 22 L14 4 L19 12 L24 2 L36 22 Z' fill='%23aeb3b5' stroke='%236d7375' stroke-width='1.1' stroke-linejoin='round'/%3E%3Cpath d='M14 7 L14 4 L16.5 7 Z' fill='%23ffffff' stroke='%236d7375' stroke-width='0.6'/%3E%3Cpath d='M24 5.5 L24 2 L26.5 5.5 Z' fill='%23ffffff' stroke='%236d7375' stroke-width='0.6'/%3E%3Cpath d='M6 22 Q12 18 18 22 Q24 19 30 22' stroke='%236d7375' stroke-width='0.6' fill='none' opacity='0.35'/%3E%3C/svg%3E");
+  width: 52px;
+  height: 34px;
+}
+// desert: large cactus centered
+.motif--desert {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 32'%3E%3Cpath d='M20 6 V26' stroke='%232e7d32' stroke-width='4.2' stroke-linecap='round'/%3E%3Cpath d='M20 14 Q14 12 13 17 Q12 19 16 19' fill='none' stroke='%232e7d32' stroke-width='2.6' stroke-linecap='round'/%3E%3Cpath d='M20 18 Q26 16 27 21 Q28 23 24 23' fill='none' stroke='%232e7d32' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='18' cy='10' r='0.9' fill='%231b5e20' opacity='0.6'/%3E%3Ccircle cx='22' cy='16' r='0.8' fill='%231b5e20' opacity='0.5'/%3E%3Cpath d='M6 27 Q12 23 18 27 Q24 29 32 27' stroke='%23b8955a' stroke-width='1' fill='none' opacity='0.22'/%3E%3C/svg%3E");
+  width: 44px;
+  height: 36px;
+}
+
+// subtle terrain tint - Board.scss already handles drop-shadow, keep only color tweaks
+.tile--wood { filter: saturate(1.05); }
+.tile--brick { filter: saturate(1.12); }
+.tile--wheat { filter: saturate(1.08); }
+.tile--sheep { filter: saturate(1.02); }
+.tile--ore   { filter: contrast(1.06); }
+.tile--desert {
+  filter: saturate(1.0) brightness(1.03);
+  border: 1.5px solid #b8955a;
+}
+.tile--port {
+  filter: none;
+  background: transparent !important;
+  clip-path: none;
+  box-shadow: none;
+  overflow: visible !important; // boat must not be clipped by hex
+  &::before { display: none; }
+  &::after { display: none; }
 }
