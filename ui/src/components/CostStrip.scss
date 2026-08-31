@@ -1,0 +1,52 @@
+.cost-strip {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  max-width: 560px;
+  margin: 0 auto 8px;
+}
+
+.cost-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  transition: background 140ms ease, border-color 140ms ease;
+
+  .cost-icon { font-size: 0.9rem; }
+  .cost-label { letter-spacing: 0.02em; }
+  .cost-resources { font-size: 0.68rem; opacity: 0.85; letter-spacing: 0.08em; }
+  .cost-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-left: 2px;
+    &.yes { background: #66bb6a; box-shadow: 0 0 6px rgba(102,187,106,0.6); }
+    &.no  { background: rgba(255,255,255,0.25); }
+  }
+
+  &.affordable {
+    background: rgba(102,187,106,0.12);
+    border-color: rgba(102,187,106,0.32);
+    color: #e8f5e9;
+  }
+  &.poor {
+    background: rgba(255,255,255,0.04);
+    color: #9aa4b2;
+    opacity: 0.72;
+  }
+}
+
+@media (max-width: 600px) {
+  .cost-strip { gap: 5px; padding: 5px 6px; }
+  .cost-item { font-size: 0.66rem; padding: 3px 6px; }
+}

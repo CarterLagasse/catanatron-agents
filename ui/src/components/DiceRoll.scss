@@ -1,0 +1,88 @@
+.dice-overlay {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.dice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 20, 32, 0.88);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 999px;
+  padding: 8px 14px 8px 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.die {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #fdf6e3;
+  border: 1.5px solid #c9b896;
+  box-shadow: 0 2px 0 #b8a684, 0 4px 10px rgba(0,0,0,0.25);
+  display: grid;
+  place-items: center;
+  &.rolling { box-shadow: 0 3px 0 #b8a684, 0 8px 18px rgba(255,213,79,0.35); }
+}
+
+.die-face {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  place-content: center;
+  &.die-1 { grid-template-columns: 1fr; .pip:nth-child(1){ grid-area: 1/1; place-self: center; } }
+  &.die-2, &.die-3 { grid-template-columns: 1fr 1fr; }
+  &.die-4, &.die-5, &.die-6 { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.pip {
+  width: 7px;
+  height: 7px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+}
+
+.dice-sum {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #ffd54f;
+  color: #2b2117;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-family: "Bungee Inline", sans-serif;
+  border: 1.5px solid #c9a43a;
+  box-shadow: 0 2px 0 #b89d2e;
+}
+
+.dice-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #e6edf5;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.32);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+@media (max-width: 600px) {
+  .dice-overlay { top: 8px; }
+  .die { width: 32px; height: 32px; }
+  .pip { width: 6px; height: 6px; }
+}

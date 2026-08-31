@@ -1,0 +1,78 @@
+@use "../variables.scss";
+
+.phase-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  margin: 8px auto 6px;
+  max-width: 560px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+
+  &.you {
+    background: linear-gradient(135deg, rgba(255,213,79,0.18), rgba(255,213,79,0.08));
+    border-color: rgba(255,213,79,0.35);
+    color: #fff8e1;
+  }
+  &.wait {
+    background: rgba(255,255,255,0.06);
+    color: #e6edf5;
+  }
+  &.bot {
+    background: rgba(66, 135, 245, 0.12);
+    color: #dbeafe;
+    border-color: rgba(66,135,245,0.3);
+  }
+  &.win {
+    background: linear-gradient(135deg, #ffd54f 0%, #ffb300 100%);
+    color: #2b2117;
+    border-color: #ffb300;
+    font-size: 0.9rem;
+  }
+
+  .turn-chip {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    color: white;
+    border: 1.5px solid rgba(0,0,0,0.25);
+    &.red { background: variables.$red; }
+    &.blue { background: variables.$blue; }
+    &.orange { background: variables.$orange; color: #2b2117; }
+    &.white { background: #ececec; color: #2b2117; }
+  }
+
+  .phase-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #66bb6a;
+    box-shadow: 0 0 8px rgba(102,187,106,0.7);
+    animation: blink 1s ease-in-out infinite;
+  }
+  .phase-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.25);
+    border-top-color: #90caf9;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .phase-sub {
+    font-size: 0.68rem;
+    opacity: 0.7;
+    font-weight: 600;
+    margin-left: auto;
+  }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
