@@ -147,13 +147,13 @@ export default function Board({
         height={containerHeight}
       >
         {bgHexes.map(({ key, cx, cy }) => (
-          <polygon key={`${key}-blue`} points={hexPoly(cx, cy, size * 1.15)} fill="#7ec8f0" stroke="none" />
+          <polygon key={`${key}-blue`} points={hexPoly(cx, cy, size * 1.22)} fill="#7ec8f0" stroke="none" />
         ))}
         {bgHexes.map(({ key, cx, cy }) => (
-          <polygon key={`${key}-white`} points={hexPoly(cx, cy, size * 1.08)} fill="#ffffff" stroke="none" />
+          <polygon key={`${key}-white`} points={hexPoly(cx, cy, size * 1.12)} fill="#ffffff" stroke="none" />
         ))}
         {bgHexes.map(({ key, cx, cy }) => (
-          <polygon key={`${key}-sand`} points={hexPoly(cx, cy, size * 1.02)} fill="#f0d9a0" stroke="none" />
+          <polygon key={`${key}-sand`} points={hexPoly(cx, cy, size * 1.06)} fill="#f0d9a0" stroke="none" />
         ))}
       </svg>
       {tiles}
@@ -163,6 +163,7 @@ export default function Board({
         center={center}
         size={size}
         coordinate={gameState.robber_coordinate}
+        isDesert={gameState.tiles.find(t => t.coordinate[0] === gameState.robber_coordinate[0] && t.coordinate[1] === gameState.robber_coordinate[1] && t.coordinate[2] === gameState.robber_coordinate[2])?.tile.type === "DESERT"}
       />
     </div>
   );

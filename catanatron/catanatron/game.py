@@ -2,18 +2,18 @@
 Contains Game class which is a thin-wrapper around the State class.
 """
 
-import uuid
 import random
 import sys
-from typing import Sequence, Union, Optional
+import uuid
+from collections.abc import Sequence
 
+from catanatron.apply_action import apply_action
 from catanatron.models.actions import generate_playable_actions
 from catanatron.models.enums import Action, ActionPrompt, ActionRecord, ActionType
-from catanatron.state import State
-from catanatron.apply_action import apply_action
-from catanatron.state_functions import player_key, player_has_rolled
 from catanatron.models.map import CatanMap, NumberPlacement
 from catanatron.models.player import Color, Player
+from catanatron.state import State
+from catanatron.state_functions import player_has_rolled, player_key
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
@@ -62,14 +62,12 @@ class GameAccumulator:
         Called when the game is created, no actions have
         been taken by players yet, but the board is decided.
         """
-        pass
 
     def step(self, game_before_action, action):
         """
         Called after each action taken by a player.
         Game should be right before action is taken.
         """
-        pass
 
     def after(self, game):
         """
@@ -78,7 +76,6 @@ class GameAccumulator:
         Check game.winning_color() to see if the game
         actually finished or exceeded turn limit (is None).
         """
-        pass
 
 
 class Game:
@@ -95,11 +92,11 @@ class Game:
     def __init__(
         self,
         players: Sequence[Player],
-        seed: Optional[int] = None,
+        seed: int | None = None,
         discard_limit: int = 7,
         friendly_robber: bool = False,
         vps_to_win: int = 10,
-        catan_map: Optional[CatanMap] = None,
+        catan_map: CatanMap | None = None,
         number_placement: NumberPlacement = "official_spiral",
         initialize: bool = True,
     ):
@@ -194,7 +191,7 @@ class Game:
         self.playable_actions = generate_playable_actions(self.state)
         return action_record
 
-    def winning_color(self) -> Union[Color, None]:
+    def winning_color(self) -> Color | None:
         """Gets winning color
 
         Returns:

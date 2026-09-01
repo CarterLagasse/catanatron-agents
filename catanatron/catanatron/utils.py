@@ -2,7 +2,7 @@ import os
 
 
 def format_secs(secs):
-    return "{0:.3f} secs".format(secs)
+    return f"{secs:.3f} secs"
 
 
 def ensure_dir(directory):

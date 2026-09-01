@@ -1,20 +1,21 @@
 import pickle
 import random
 from collections import defaultdict
-from typing import Any, Dict, List, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
-from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap, NumberPlacement
 from catanatron.models.board import Board
+from catanatron.models.decks import (
+    starting_devcard_bank,
+    starting_resource_bank,
+)
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
     ActionPrompt,
     ActionRecord,
 )
-from catanatron.models.decks import (
-    starting_devcard_bank,
-    starting_resource_bank,
-)
+from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap, NumberPlacement
 from catanatron.models.player import Color, Player
 
 # These will be prefixed by P0_, P1_, ...
@@ -117,11 +118,11 @@ class State:
             random.shuffle(self.development_listdeck)
 
             # Auxiliary attributes to implement game logic
-            self.buildings_by_color: Dict[Color, Dict[Any, Any]] = {
+            self.buildings_by_color: dict[Color, dict[Any, Any]] = {
                 p.color: defaultdict(list) for p in players
             }
             # for undo and to show in the UI the action log
-            self.action_records: List[ActionRecord] = []
+            self.action_records: list[ActionRecord] = []
             self.num_turns = 0  # num_completed_turns
 
             # Current prompt / player
@@ -133,13 +134,13 @@ class State:
             self.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
             self.is_initial_build_phase = True
             self.is_discarding = False
-            self.discard_counts: List[int] = [0] * len(self.colors)
+            self.discard_counts: list[int] = [0] * len(self.colors)
             self.is_moving_knight = False
             self.is_road_building = False
             self.free_roads_available = 0
 
             self.is_resolving_trade = False
-            self.current_trade: Tuple = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            self.current_trade: tuple = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             self.acceptees = tuple(False for _ in self.colors)
 
     def current_player(self):

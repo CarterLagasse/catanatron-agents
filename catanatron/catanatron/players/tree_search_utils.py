@@ -1,25 +1,25 @@
 import math
 from collections import defaultdict
 
+from catanatron.features import build_production_features
 from catanatron.game import Game
-from catanatron.models.map import number_probability
 from catanatron.models.enums import (
+    CITY,
     DEVELOPMENT_CARDS,
     RESOURCES,
     SETTLEMENT,
-    CITY,
     Action,
     ActionRecord,
     ActionType,
 )
-from catanatron.state_functions import (
-    get_player_buildings,
-    get_dev_cards_in_hand,
-    get_player_freqdeck,
-    get_enemy_colors,
-)
-from catanatron.features import build_production_features
+from catanatron.models.map import number_probability
 from catanatron.players.value import value_production
+from catanatron.state_functions import (
+    get_dev_cards_in_hand,
+    get_enemy_colors,
+    get_player_buildings,
+    get_player_freqdeck,
+)
 
 DETERMINISTIC_ACTIONS = set(
     [

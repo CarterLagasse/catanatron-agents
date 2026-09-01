@@ -1,7 +1,7 @@
 import os
 import time
 from collections import defaultdict
-from typing import Tuple, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,7 @@ from catanatron.utils import format_secs
 class ReinforcementLearningAccumulator(GameAccumulator):
     def __init__(
         self,
-        player_colors: Tuple[Color],
+        player_colors: tuple[Color],
         map_type: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE",
         include_board_tensor=True,
         total_return_fns={
@@ -141,7 +141,7 @@ class ReinforcementLearningAccumulator(GameAccumulator):
 class CsvDataAccumulator(ReinforcementLearningAccumulator):
     def __init__(
         self,
-        player_colors: Tuple[Color],
+        player_colors: tuple[Color],
         map_type: Literal["BASE", "TOURNAMENT", "MINI"],
         output,
         include_board_tensor=True,
@@ -181,7 +181,7 @@ class CsvDataAccumulator(ReinforcementLearningAccumulator):
 class ParquetDataAccumulator(ReinforcementLearningAccumulator):
     def __init__(
         self,
-        player_colors: Tuple[Color],
+        player_colors: tuple[Color],
         map_type: Literal["BASE", "TOURNAMENT", "MINI"],
         output,
         include_board_tensor=True,

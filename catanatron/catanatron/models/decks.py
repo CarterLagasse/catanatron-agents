@@ -4,23 +4,22 @@ We use a histogram / 'frequency list' to represent decks (aliased 'freqdeck').
 This representation is concise, easy to copy, access and fast to compare.
 """
 
-from typing import Iterable, List
+from collections.abc import Iterable
 
 from catanatron.models.enums import (
+    BRICK,
     KNIGHT,
     MONOPOLY,
-    ROAD_BUILDING,
-    VICTORY_POINT,
-    YEAR_OF_PLENTY,
-    WOOD,
-    BRICK,
-    SHEEP,
-    WHEAT,
     ORE,
+    ROAD_BUILDING,
+    SHEEP,
+    VICTORY_POINT,
+    WHEAT,
+    WOOD,
+    YEAR_OF_PLENTY,
     FastDevCard,
     FastResource,
 )
-
 
 ROAD_COST_FREQDECK = [1, 1, 0, 0, 0]
 SETTLEMENT_COST_FREQDECK = [1, 1, 1, 1, 0]
@@ -76,7 +75,7 @@ def starting_devcard_bank():
     )
 
 
-def draw_from_listdeck(list1: List, amount: int, card: int):
+def draw_from_listdeck(list1: list, amount: int, card: int):
     i = 0
     while i < amount:
         index = list1.index(card)

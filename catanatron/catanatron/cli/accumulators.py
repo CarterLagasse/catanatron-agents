@@ -1,10 +1,11 @@
-import time
-import os
 import json
+import os
+import time
 from collections import defaultdict
 
-from catanatron.game import GameAccumulator, Game
+from catanatron.game import Game, GameAccumulator
 from catanatron.json import GameEncoder
+from catanatron.models.enums import CITY, SETTLEMENT, VICTORY_POINT
 from catanatron.state_functions import (
     get_actual_victory_points,
     get_dev_cards_in_hand,
@@ -12,7 +13,6 @@ from catanatron.state_functions import (
     get_longest_road_color,
     get_player_buildings,
 )
-from catanatron.models.enums import VICTORY_POINT, SETTLEMENT, CITY
 
 
 class VpDistributionAccumulator(GameAccumulator):

@@ -1,10 +1,10 @@
 import random
 
+from catanatron.game import Game
+from catanatron.models.player import Player
 from catanatron.state_functions import (
     player_key,
 )
-from catanatron.models.player import Player
-from catanatron.game import Game
 
 
 class VictoryPointPlayer(Player):

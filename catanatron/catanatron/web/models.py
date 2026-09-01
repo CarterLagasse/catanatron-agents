@@ -1,16 +1,17 @@
-import os
 import json
+import os
 import pickle
 from contextlib import contextmanager
-from catanatron.json import GameEncoder
 
-from catanatron.game import Game
-from catanatron.state_functions import get_state_index
-from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_engine
+from flask import abort
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, LargeBinary, MetaData, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
-from flask_sqlalchemy import SQLAlchemy
-from flask import abort
+
+from catanatron.game import Game
+from catanatron.json import GameEncoder
+from catanatron.state_functions import get_state_index
 
 # Using approach from: https://stackoverflow.com/questions/41004540/using-sqlalchemy-models-in-and-out-of-flask/41014157
 metadata = MetaData()

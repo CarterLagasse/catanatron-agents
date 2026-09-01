@@ -1,6 +1,5 @@
-import random
 import builtins
-
+import random
 from enum import Enum
 
 
@@ -46,7 +45,6 @@ class Player:
 
     def reset_state(self):
         """Hook for resetting state between games"""
-        pass
 
     def __repr__(self):
         return f"{type(self).__name__}:{self.color.value}"

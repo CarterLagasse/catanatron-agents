@@ -5,14 +5,13 @@ Renders the Catan board using hexagonal tiles in a minimalist style.
 """
 
 import math
-from typing import Tuple
+
 import numpy as np
 import pygame
 
-from catanatron.models.enums import WOOD, BRICK, SHEEP, WHEAT, ORE, SETTLEMENT, CITY
-from catanatron.models.player import Color
 from catanatron.game import Game
-
+from catanatron.models.enums import BRICK, CITY, ORE, SETTLEMENT, SHEEP, WHEAT, WOOD
+from catanatron.models.player import Color
 
 # Base constants (scale with render_scale)
 HEX_SIZE = 70  # pixels (balanced for both MINI and BASE maps)
@@ -80,7 +79,7 @@ class PygameRenderer:
         self.center_x = self.render_width // 2
         self.center_y = self.render_height // 2
 
-    def cube_to_pixel(self, coord: Tuple[int, int, int]) -> Tuple[float, float]:
+    def cube_to_pixel(self, coord: tuple[int, int, int]) -> tuple[float, float]:
         """Convert cube coordinate to pixel position (flat-top hexagon).
 
         Args:
@@ -103,7 +102,7 @@ class PygameRenderer:
 
         return (px, py)
 
-    def hexagon_corners(self, center: Tuple[float, float], size: float) -> list:
+    def hexagon_corners(self, center: tuple[float, float], size: float) -> list:
         """Get the 6 corner points of a pointy-top hexagon.
 
         Args:
@@ -125,9 +124,9 @@ class PygameRenderer:
 
     def draw_hexagon(
         self,
-        center: Tuple[float, float],
+        center: tuple[float, float],
         size: float,
-        fill_color: Tuple[int, int, int],
+        fill_color: tuple[int, int, int],
         outline: bool = True,
     ):
         """Draw a hexagon on the surface.
@@ -168,7 +167,7 @@ class PygameRenderer:
         }
         return pips.get(number, 0)
 
-    def draw_number_token(self, center: Tuple[float, float], number: int):
+    def draw_number_token(self, center: tuple[float, float], number: int):
         """Draw a number token like in the physical Catan game.
 
         Args:
@@ -221,7 +220,7 @@ class PygameRenderer:
                 )
 
     def draw_tile(
-        self, coord: Tuple[int, int, int], tile, robber_coord: Tuple[int, int, int]
+        self, coord: tuple[int, int, int], tile, robber_coord: tuple[int, int, int]
     ):
         """Draw a single land tile.
 
@@ -244,7 +243,7 @@ class PygameRenderer:
         if coord == robber_coord:
             self.draw_robber(center)
 
-    def draw_robber(self, center: Tuple[float, float]):
+    def draw_robber(self, center: tuple[float, float]):
         """Draw the robber as a black circle.
 
         Args:
@@ -267,7 +266,7 @@ class PygameRenderer:
         r_rect = r_text.get_rect(center=robber_center)
         self.surface.blit(r_text, r_rect)
 
-    def get_node_delta(self, direction: str, size: float) -> Tuple[float, float]:
+    def get_node_delta(self, direction: str, size: float) -> tuple[float, float]:
         """Get the offset from tile center to node based on direction.
 
         Matches the frontend getNodeDelta function.
@@ -292,7 +291,7 @@ class PygameRenderer:
         }
         return deltas.get(direction, (0, 0))
 
-    def get_node_pixel_position(self, node_id: int, game: Game) -> Tuple[float, float]:
+    def get_node_pixel_position(self, node_id: int, game: Game) -> tuple[float, float]:
         """Get pixel position for a node.
 
         Args:
@@ -344,7 +343,7 @@ class PygameRenderer:
             pygame.draw.rect(self.surface, player_color, rect)
             pygame.draw.rect(self.surface, BORDER_COLOR, rect, self.outline_width)
 
-    def draw_edge(self, edge_id: Tuple[int, int], color: Color, game: Game):
+    def draw_edge(self, edge_id: tuple[int, int], color: Color, game: Game):
         """Draw a road along an edge.
 
         Args:

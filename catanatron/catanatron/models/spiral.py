@@ -1,7 +1,6 @@
-from collections.abc import Generator
-from typing import Mapping
+from collections.abc import Generator, Mapping
 
-from catanatron.models.coordinate_system import Direction, UNIT_VECTORS, add, Coordinate
+from catanatron.models.coordinate_system import UNIT_VECTORS, Coordinate, Direction, add
 from catanatron.models.tiles import LandTile, Tile
 
 

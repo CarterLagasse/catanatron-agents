@@ -2,17 +2,17 @@ import json
 import logging
 import traceback
 
-from flask import Response, Blueprint, jsonify, abort, request
+from flask import Blueprint, Response, abort, jsonify, request
 
-from catanatron.web.models import upsert_game_state, get_game_state
-from catanatron.json import GameEncoder, action_from_json
-from catanatron.models.player import Color, RandomPlayer
 from catanatron.game import Game
+from catanatron.json import GameEncoder, action_from_json
 from catanatron.models.map import build_map
-from catanatron.players.value import ValueFunctionPlayer
+from catanatron.models.player import Color, RandomPlayer
 from catanatron.players.minimax import AlphaBetaPlayer
+from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron.web.mcts_analysis import GameAnalyzer
+from catanatron.web.models import get_game_state, upsert_game_state
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 VALID_MAP_TEMPLATES = {"BASE", "MINI", "TOURNAMENT"}
@@ -173,7 +173,7 @@ def mcts_analysis_endpoint(game_id, state_index):
         )
 
     except Exception as e:
-        logging.error(f"Error in MCTS analysis endpoint: {str(e)}")
+        logging.error(f"Error in MCTS analysis endpoint: {e!s}")
         logging.error(traceback.format_exc())
         return Response(
             response=json.dumps(

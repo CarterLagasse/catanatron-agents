@@ -3,13 +3,12 @@ from collections import namedtuple
 from rich.table import Table
 
 from catanatron.models.player import Color, HumanPlayer, RandomPlayer
-from catanatron.players.weighted_random import WeightedRandomPlayer
-from catanatron.players.value import ValueFunctionPlayer
-from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
-from catanatron.players.search import VictoryPointPlayer
 from catanatron.players.mcts import MCTSPlayer
+from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
 from catanatron.players.playouts import GreedyPlayoutsPlayer
-
+from catanatron.players.search import VictoryPointPlayer
+from catanatron.players.value import ValueFunctionPlayer
+from catanatron.players.weighted_random import WeightedRandomPlayer
 
 # Player must have a CODE, NAME, DESCRIPTION, CLASS.
 CliPlayer = namedtuple("CliPlayer", ["code", "name", "description", "import_fn"])

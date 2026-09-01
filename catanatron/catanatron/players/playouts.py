@@ -1,6 +1,6 @@
-import time
-import random
 import multiprocessing
+import random
+import time
 from collections import Counter
 
 from catanatron.game import Game

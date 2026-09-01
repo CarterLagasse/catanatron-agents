@@ -1,36 +1,35 @@
-import os
 import importlib.util
+import os
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal
 
 import click
-from rich.console import Console
-from rich.table import Table
-from rich.progress import Progress, BarColumn, TimeRemainingColumn
 from rich import box
-from rich.theme import Theme
+from rich.console import Console
+from rich.progress import BarColumn, Progress, TimeRemainingColumn
+from rich.table import Table
 from rich.text import Text
+from rich.theme import Theme
 
 from catanatron.game import Game
-from catanatron.models.player import Color
 from catanatron.models.map import NumberPlacement, build_map
+from catanatron.models.player import Color
 from catanatron.state_functions import get_actual_victory_points
 
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-from catanatron.utils import ensure_dir, format_secs
-from catanatron.cli.cli_players import (
-    CUSTOM_ACCUMULATORS,
-    parse_cli_string,
-    player_help_table,
-)
 from catanatron.cli.accumulators import (
     JsonDataAccumulator,
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
+from catanatron.cli.cli_players import (
+    CUSTOM_ACCUMULATORS,
+    parse_cli_string,
+    player_help_table,
+)
 from catanatron.cli.simulation_accumulator import SimulationAccumulator
-
+from catanatron.utils import ensure_dir, format_secs
 
 custom_theme = Theme(
     {
@@ -214,8 +213,8 @@ def simulate(
 class OutputOptions:
     """Class to keep track of output CLI flags"""
 
-    output: Union[str, None] = None  # path to store files
-    output_format: Union[Literal["csv", "parquet", "json"], None] = None
+    output: str | None = None  # path to store files
+    output_format: Literal["csv", "parquet", "json"] | None = None
     include_board_tensor: bool = False
     db: bool = False
     step_db: bool = False

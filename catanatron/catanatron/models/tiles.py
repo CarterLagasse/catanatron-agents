@@ -1,20 +1,20 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple, Union
+from typing import Union
 
-from catanatron.models.enums import FastResource, EdgeRef, NodeRef
 from catanatron.models.coordinate_system import Direction
+from catanatron.models.enums import EdgeRef, FastResource, NodeRef
 
-EdgeId = Tuple[int, int]
+EdgeId = tuple[int, int]
 NodeId = int
 
 
 @dataclass
 class LandTile:
     id: int
-    resource: Union[FastResource, None]  # None means desert tile
-    number: Union[int, None]  # None if desert
-    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
-    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
+    resource: FastResource | None  # None means desert tile
+    number: int | None  # None if desert
+    nodes: dict[NodeRef, NodeId]  # node_ref => node_id
+    edges: dict[EdgeRef, EdgeId]  # edge_ref => edge
 
     # The id is unique among the tiles, so we can use it as the hash.
     def __hash__(self):
@@ -24,10 +24,10 @@ class LandTile:
 @dataclass
 class Port:
     id: int
-    resource: Union[FastResource, None]  # None means desert tile
+    resource: FastResource | None  # None means desert tile
     direction: Direction
-    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
-    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
+    nodes: dict[NodeRef, NodeId]  # node_ref => node_id
+    edges: dict[EdgeRef, EdgeId]  # edge_ref => edge
 
     # The id is unique among the tiles, so we can use it as the hash.
     def __hash__(self):
@@ -36,8 +36,8 @@ class Port:
 
 @dataclass(frozen=True)
 class Water:
-    nodes: Dict[NodeRef, int]
-    edges: Dict[EdgeRef, EdgeId]
+    nodes: dict[NodeRef, int]
+    edges: dict[EdgeRef, EdgeId]
 
 
 Tile = Union[LandTile, Port, Water]

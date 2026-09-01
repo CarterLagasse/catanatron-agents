@@ -28,11 +28,11 @@ function Building({ building, color }: BuildingProps) {
       </svg>
     );
   }
-  // settlement: small square + triangle on top, no outline, together — deliberately compact
+  // settlement: small square + triangle on top, no outline — deliberately compact
   return (
-    <svg viewBox="0 0 24 20" className={cn(color, "settlement")} aria-hidden style={{ filter: "drop-shadow(0 1.6px 2px rgba(0,0,0,0.35))" }}>
-      <rect x="7" y="10" width="10" height="8.5" fill={fill} />
-      <path d="M12 2 L4 10 L20 10 Z" fill={fill} />
+    <svg viewBox="0 0 24 24" className={cn(color, "settlement")} aria-hidden style={{ filter: "drop-shadow(0 1.6px 2px rgba(0,0,0,0.35))", overflow: "visible" }}>
+      <rect x="7" y="14" width="10" height="8" fill={fill} />
+      <path d="M12 4 L5 14 L19 14 Z" fill={fill} />
     </svg>
   );
 }

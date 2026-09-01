@@ -5,7 +5,7 @@ by current player). Main function is generate_playable_actions.
 
 import operator as op
 from functools import reduce
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any
 
 from catanatron.models.decks import (
     CITY_COST_FREQDECK,
@@ -17,17 +17,17 @@ from catanatron.models.decks import (
     freqdeck_from_listdeck,
 )
 from catanatron.models.enums import (
-    RESOURCES,
-    Action,
-    ActionPrompt,
-    ActionType,
     BRICK,
     ORE,
-    FastResource,
+    RESOURCES,
     SETTLEMENT,
     SHEEP,
     WHEAT,
     WOOD,
+    Action,
+    ActionPrompt,
+    ActionType,
+    FastResource,
 )
 from catanatron.state import State
 from catanatron.state_functions import (
@@ -43,7 +43,7 @@ from catanatron.state_functions import (
 )
 
 
-def generate_playable_actions(state: State) -> List[Action]:
+def generate_playable_actions(state: State) -> list[Action]:
     action_prompt = state.current_prompt
     color = state.current_color()
 
@@ -117,12 +117,12 @@ def generate_playable_actions(state: State) -> List[Action]:
         raise RuntimeError("Unknown ActionPrompt: " + str(action_prompt))
 
 
-def monopoly_possibilities(color) -> List[Action]:
+def monopoly_possibilities(color) -> list[Action]:
     return [Action(color, ActionType.PLAY_MONOPOLY, card) for card in RESOURCES]
 
 
-def year_of_plenty_possibilities(color, freqdeck: List[int]) -> List[Action]:
-    options: Set[Union[Tuple[FastResource, FastResource], Tuple[FastResource]]] = set()
+def year_of_plenty_possibilities(color, freqdeck: list[int]) -> list[Action]:
+    options: set[tuple[FastResource, FastResource] | tuple[FastResource]] = set()
     for i, first_card in enumerate(RESOURCES):
         for j in range(i, len(RESOURCES)):
             second_card = RESOURCES[j]  # doing it this way to not repeat
@@ -144,7 +144,7 @@ def year_of_plenty_possibilities(color, freqdeck: List[int]) -> List[Action]:
     )
 
 
-def road_building_possibilities(state, color, check_money=True) -> List[Action]:
+def road_building_possibilities(state, color, check_money=True) -> list[Action]:
     key = player_key(state, color)
 
     # Check if can't build any more roads.
@@ -161,7 +161,7 @@ def road_building_possibilities(state, color, check_money=True) -> List[Action]:
     return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
 
 
-def settlement_possibilities(state, color, initial_build_phase=False) -> List[Action]:
+def settlement_possibilities(state, color, initial_build_phase=False) -> list[Action]:
     if initial_build_phase:
         buildable_node_ids = state.board.buildable_node_ids(
             color, initial_build_phase=True
@@ -188,7 +188,7 @@ def settlement_possibilities(state, color, initial_build_phase=False) -> List[Ac
             return []
 
 
-def city_possibilities(state, color) -> List[Action]:
+def city_possibilities(state, color) -> list[Action]:
     key = player_key(state, color)
 
     can_buy_city = player_resource_freqdeck_contains(state, color, CITY_COST_FREQDECK)
@@ -205,7 +205,7 @@ def city_possibilities(state, color) -> List[Action]:
     ]
 
 
-def robber_possibilities(state, color) -> List[Action]:
+def robber_possibilities(state, color) -> list[Action]:
     actions = _robber_possibilities_without_friendly_robber(state, color)
     if not state.friendly_robber:
         return actions
@@ -219,7 +219,7 @@ def robber_possibilities(state, color) -> List[Action]:
     return filtered_actions if len(filtered_actions) > 0 else actions
 
 
-def _robber_possibilities_without_friendly_robber(state, color) -> List[Action]:
+def _robber_possibilities_without_friendly_robber(state, color) -> list[Action]:
     actions = []
     for coordinate, tile in state.board.map.land_tiles.items():
         if coordinate == state.board.robber_coordinate:
@@ -267,7 +267,7 @@ def _robber_action_blocks_low_vp_enemy(state, color, action) -> bool:
     return False
 
 
-def initial_road_possibilities(state, color) -> List[Action]:
+def initial_road_possibilities(state, color) -> list[Action]:
     # Must be connected to last settlement
     last_settlement_node_id = state.buildings_by_color[color][SETTLEMENT][-1]
 
@@ -278,7 +278,7 @@ def initial_road_possibilities(state, color) -> List[Action]:
     return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
 
 
-def discard_possibilities(state: State, color) -> List[Action]:
+def discard_possibilities(state: State, color) -> list[Action]:
     if state.discard_counts[state.color_to_index[color]] <= 0:
         return []
 
@@ -297,7 +297,7 @@ def ncr(n, r):
     return numer // denom
 
 
-def maritime_trade_possibilities(state, color) -> List[Action]:
+def maritime_trade_possibilities(state, color) -> list[Action]:
     hand_freqdeck = [
         player_num_resource_cards(state, color, resource) for resource in RESOURCES
     ]
@@ -316,7 +316,7 @@ def inner_maritime_trade_possibilities(hand_freqdeck, bank_freqdeck, port_resour
     trade_offers = set()
 
     # Get lowest rate per resource
-    rates: Dict[FastResource, int] = {WOOD: 4, BRICK: 4, SHEEP: 4, WHEAT: 4, ORE: 4}
+    rates: dict[FastResource, int] = {WOOD: 4, BRICK: 4, SHEEP: 4, WHEAT: 4, ORE: 4}
     if None in port_resources:
         rates = {WOOD: 3, BRICK: 3, SHEEP: 3, WHEAT: 3, ORE: 3}
     for resource in port_resources:
@@ -327,7 +327,7 @@ def inner_maritime_trade_possibilities(hand_freqdeck, bank_freqdeck, port_resour
     for index, resource in enumerate(RESOURCES):
         amount = hand_freqdeck[index]
         if amount >= rates[resource]:
-            resource_out: List[Any] = [resource] * rates[resource]
+            resource_out: list[Any] = [resource] * rates[resource]
             resource_out += [None] * (4 - rates[resource])
             for j_resource in RESOURCES:
                 if (

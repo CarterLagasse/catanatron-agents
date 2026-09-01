@@ -1,19 +1,10 @@
 import random
 from collections import defaultdict
-from typing import Dict
 
-from catanatron.models.board import Board
-from catanatron.models.enums import (
-    MONOPOLY,
-    RESOURCES,
-    YEAR_OF_PLENTY,
-    SETTLEMENT,
-    CITY,
-    Action,
-    ActionPrompt,
-    ActionRecord,
-    ActionType,
+from catanatron.models.actions import (
+    road_building_possibilities,
 )
+from catanatron.models.board import Board
 from catanatron.models.decks import (
     CITY_COST_FREQDECK,
     DEVELOPMENT_CARD_COST_FREQDECK,
@@ -27,9 +18,19 @@ from catanatron.models.decks import (
     freqdeck_replenish,
     freqdeck_subtract,
 )
-from catanatron.models.actions import (
-    road_building_possibilities,
+from catanatron.models.enums import (
+    CITY,
+    MONOPOLY,
+    RESOURCES,
+    SETTLEMENT,
+    YEAR_OF_PLENTY,
+    Action,
+    ActionPrompt,
+    ActionRecord,
+    ActionType,
+    FastResource,
 )
+from catanatron.models.player import Color
 from catanatron.state import State
 from catanatron.state_functions import (
     build_city,
@@ -41,18 +42,15 @@ from catanatron.state_functions import (
     player_can_afford_dev_card,
     player_can_play_dev,
     player_clean_turn,
-    player_deck_random_select,
-    player_freqdeck_add,
     player_deck_draw,
+    player_deck_random_select,
     player_deck_replenish,
+    player_freqdeck_add,
     player_freqdeck_subtract,
-    player_deck_to_array,
     player_key,
     player_num_resource_cards,
     player_resource_freqdeck_contains,
 )
-from catanatron.models.player import Color
-from catanatron.models.enums import FastResource
 
 
 def apply_action(
@@ -547,10 +545,10 @@ def yield_resources(board: Board, resource_freqdeck, number):
             Second is an array of resources that couldn't be yieleded
             because they depleted.
     """
-    intented_payout: Dict[Color, Dict[FastResource, int]] = defaultdict(
+    intented_payout: dict[Color, dict[FastResource, int]] = defaultdict(
         lambda: defaultdict(int)
     )
-    resource_totals: Dict[FastResource, int] = defaultdict(int)
+    resource_totals: dict[FastResource, int] = defaultdict(int)
     for coordinate, tile in board.map.land_tiles.items():
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield

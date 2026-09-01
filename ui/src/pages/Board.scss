@@ -217,26 +217,24 @@
   height: 100% !important;
 }
 
-// ===== Edges - V-shaped mitered like goal (fit together at triangular hex corners)
+// ===== Edges - thin roads with V/mitered ends
 .edge {
   position: absolute;
   display: flex;
   justify-content: center;
-  height: 16px;
+  height: 12px;
   z-index: 3;
 }
 .road {
   position: absolute;
-  border: 1.6px solid rgba(0, 0, 0, 0.62);
   width: 100%;
   height: 100%;
-  border-radius: 2px;
-  // V/mitered ends to fit together at 60°/120° nodes (pointed hexagon)
+  // V/mitered ends - outline via box-shadow (clip-path clips border)
   clip-path: polygon(6% 0%, 94% 0%, 100% 50%, 94% 100%, 6% 100%, 0% 50%);
+  filter: drop-shadow(0 0 0.8px rgba(0,0,0,0.62));
   box-shadow:
-    inset 0 1.2px 0 rgba(255,255,255,0.40),
-    inset 0 -1px 0 rgba(0,0,0,0.18),
-    0 2px 5px rgba(0,0,0,0.38);
+    inset 0 1px 0 rgba(255,255,255,0.40),
+    inset 0 -0.8px 0 rgba(0,0,0,0.18);
   background-image: linear-gradient(
     to bottom,
     rgba(255,255,255,0.22) 0%,
@@ -249,13 +247,13 @@
   &.ORANGE { background-color: variables.$orange; }
   &.WHITE { background-color: #ececec; }
 }
-.edge:hover .road { filter: brightness(1.08); transform: scaleY(1.06); }
+.edge:hover .road { filter: drop-shadow(0 0 0.8px rgba(0,0,0,0.62)) brightness(1.08); transform: scaleY(1.06); }
 
 @media screen and (min-width: variables.$sm-breakpoint) {
-  .edge { height: 16px; }
+  .edge { height: 12px; }
 }
 @media screen and (max-width: variables.$sm-breakpoint) {
-  .edge { height: 13px; }
+  .edge { height: 10px; }
 }
 
 // ===== Nodes - chunky like goal
@@ -267,6 +265,7 @@
   justify-content: center;
   align-items: center;
   z-index: 4;
+  overflow: visible;
   // SVG pieces fill the node
   svg.settlement,
   svg.city {

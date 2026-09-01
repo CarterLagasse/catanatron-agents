@@ -43,7 +43,7 @@ export default function Edge({
       style={{
         left: tileX,
         top: tileY,
-        width: size * 0.9,
+        width: size * 0.9 + 8,
         transform: transform,
       }}
       onClick={onClick}

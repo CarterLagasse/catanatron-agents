@@ -1,28 +1,29 @@
-from typing import Any, List, Literal, Tuple
 import functools
 from collections import Counter
+from typing import Any, Literal
+
 import networkx as nx
 
+from catanatron.game import Game
+from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.decks import freqdeck_count
+from catanatron.models.enums import (
+    CITY,
+    DEVELOPMENT_CARDS,
+    RESOURCES,
+    ROAD,
+    SETTLEMENT,
+    VICTORY_POINT,
+    ActionType,
+)
+from catanatron.models.map import NUM_TILES, CatanMap, build_map, number_probability
+from catanatron.models.player import Color, SimplePlayer
 from catanatron.state_functions import (
     get_player_buildings,
     player_key,
     player_num_dev_cards,
     player_num_resource_cards,
 )
-from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
-from catanatron.models.map import NUM_TILES, CatanMap, build_map, number_probability
-from catanatron.models.player import Color, SimplePlayer
-from catanatron.models.enums import (
-    DEVELOPMENT_CARDS,
-    RESOURCES,
-    SETTLEMENT,
-    CITY,
-    ROAD,
-    ActionType,
-    VICTORY_POINT,
-)
-from catanatron.game import Game
 
 
 # ===== Helpers
@@ -39,7 +40,7 @@ def is_road(game, edge, color):
 
 
 @functools.lru_cache(1024)
-def iter_players(colors: Tuple[Color], p0_color: Color):
+def iter_players(colors: tuple[Color], p0_color: Color):
     """Iterator: for i, player in iter_players(game, p0.color)"""
     start_index = colors.index(p0_color)
     result = []
@@ -458,7 +459,7 @@ def port_distance_features(game: Game, p0_color: Color):
     features = {}
     ports = game.state.board.map.port_nodes
     distances = get_node_distances()
-    resources_and_none: List[Any] = RESOURCES.copy()
+    resources_and_none: list[Any] = RESOURCES.copy()
     resources_and_none += [None]
     for resource_or_none in resources_and_none:
         port_name = resource_or_none or "3:1"

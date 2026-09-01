@@ -1,16 +1,16 @@
-from functools import lru_cache
-from typing import Tuple, Literal
+from functools import cache
+from typing import Literal
 
 from catanatron.models.actions import Action
 from catanatron.models.board import get_edges
 from catanatron.models.enums import RESOURCES, ActionType
-from catanatron.models.player import Color
 from catanatron.models.map import build_map
+from catanatron.models.player import Color
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_action_array(
-    player_colors: Tuple[Color], map_type: Literal["BASE", "TOURNAMENT", "MINI"]
+    player_colors: tuple[Color], map_type: Literal["BASE", "TOURNAMENT", "MINI"]
 ):
     catan_map = build_map(map_type)
     num_nodes = len(catan_map.land_nodes)
@@ -83,7 +83,7 @@ def to_action_type_space(action_type: ActionType) -> int:
 
 def to_action_space(
     action: Action,
-    player_colors: Tuple[Color],
+    player_colors: tuple[Color],
     map_type: Literal["BASE", "TOURNAMENT", "MINI"],
 ):
     """maps action to space_action equivalent integer"""
@@ -94,7 +94,7 @@ def to_action_space(
 def from_action_space(
     action_int,
     color: Color,
-    player_colors: Tuple[Color],
+    player_colors: tuple[Color],
     map_type: Literal["BASE", "TOURNAMENT", "MINI"],
 ):
     """maps action_int to catantron.models.actions.Action"""

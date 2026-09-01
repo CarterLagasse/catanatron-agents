@@ -1,18 +1,18 @@
 import random
 
+from catanatron.features import (
+    build_production_features,
+    reachability_features,
+    resource_hand_features,
+)
+from catanatron.models.enums import CITY, RESOURCES, SETTLEMENT
+from catanatron.models.player import Player
 from catanatron.state_functions import (
     get_longest_road_length,
     get_played_dev_cards,
     player_key,
     player_num_dev_cards,
     player_num_resource_cards,
-)
-from catanatron.models.player import Player
-from catanatron.models.enums import RESOURCES, SETTLEMENT, CITY
-from catanatron.features import (
-    build_production_features,
-    reachability_features,
-    resource_hand_features,
 )
 
 TRANSLATE_VARIETY = 4  # i.e. each new resource is like 4 production points

@@ -84,18 +84,69 @@ export const PortBoat = ({
   style?: Partial<React.CSSProperties>;
   size: number;
 }) => {
-  const ratio = PORT_RESOURCES.includes(resource) ? "2:1" : "3:1";
+  const is3to1 = !PORT_RESOURCES.includes(resource);
+  const ratio = is3to1 ? "3:1" : "2:1";
+  const sailH = Math.round(size * 0.28);
+  const sailW = Math.round(size * 0.22);
+  const hullW = Math.round(size * 0.44);
+  const hullH = Math.round(size * 0.12);
+  const mastH = Math.round(size * 0.03);
+  const iconScale = is3to1 ? 0.30 : 0.26;
+  const ratioScale = is3to1 ? 0.28 : 0.22;
+  const mastExposed = Math.round(size * 0.06);
+  const totalH = sailH + mastExposed + hullH;
   return (
     <div className="port-boat" style={style} aria-label={`Port ${ratio}`}>
-      <svg width={Math.round(size * 0.55)} height={Math.round(size * 0.38)} viewBox="0 0 64 36" aria-hidden>
-        <path d="M6 22 Q32 30 58 22 L52 27 Q32 34 12 27 Z" fill="#5d4037" stroke="#3e2723" strokeWidth="1.2" />
-        <path d="M8 22 Q32 28 56 22" fill="none" stroke="#8d6e63" strokeWidth="1" opacity="0.7" />
-        <rect x="14" y="15" width="36" height="7" rx="1.5" fill="#d7ccc8" stroke="#3e2723" strokeWidth="1" />
-        <rect x="30.8" y="4" width="2.4" height="12" fill="#3e2723" />
-        <path d="M33.2 4.5 L50 10 L33.2 15 Z" fill="#fff8e1" stroke="#3e2723" strokeWidth="0.9" />
-        <path d="M12 11 L12 6 L18 8.5 Z" fill={PORT_RESOURCES.includes(resource) ? TERRAIN_COLORS[resource as string] : "#fff"} stroke="#3e2723" strokeWidth="0.7" />
-      </svg>
-      <span className="port-badge">{ratio}</span>
+      <div style={{ position: "relative", width: Math.max(sailW, hullW), height: totalH }}>
+        {/* sail at top */}
+        <div style={{
+          position: "absolute",
+          top: 4,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: sailW,
+          height: sailH,
+          background: "#ffffff",
+          border: "1.2px solid #3e2723",
+          borderRadius: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1,
+          filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.25))",
+        }}>
+          <svg width={Math.round(sailH * iconScale)} height={Math.round(sailH * iconScale)} viewBox="0 0 24 24" aria-hidden>
+            {resource === "WOOD" && <path d="M12 3 L6 14 H8 L5 19 H19 L16 14 H18 Z" fill="#1e5d29" stroke="#004405" strokeWidth="1.8" />}
+            {resource === "BRICK" && <rect x="3" y="5" width="18" height="14" rx="1.5" fill="#e26427" stroke="#b84d1e" strokeWidth="1.8" />}
+            {resource === "SHEEP" && <ellipse cx="12" cy="13" rx="8" ry="5.5" fill="#8bb60e" stroke="#6a8a0b" strokeWidth="1.8" />}
+            {resource === "WHEAT" && <path d="M12 19 V5" stroke="#a86a0a" strokeWidth="2.5" strokeLinecap="round" />}
+            {resource === "ORE" && <path d="M4 18 L12 4 L20 18 Z" fill="#9ba09c" stroke="#7d827f" strokeWidth="1.8" />}
+          </svg>
+          <span style={{
+            marginTop: -2,
+            fontSize: Math.round(sailH * ratioScale),
+            fontWeight: 900,
+            color: "#1e3d1e",
+            lineHeight: 1,
+            fontFamily: "Nunito, sans-serif",
+          }}>{ratio}</span>
+        </div>
+        {/* mast: from bottom of sail down into hull */}
+        <div style={{
+          position: "absolute",
+          left: "50%",
+          top: sailH + 4,
+          width: 2,
+          height: mastExposed + hullH - 8,
+          background: "#3e2723",
+          transform: "translateX(-50%)",
+        }} />
+        {/* hull at bottom */}
+        <svg width={hullW} height={hullH} viewBox="0 0 64 14" style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)" }} aria-hidden>
+          <path d="M4 1 Q32 12 60 1 L54 8 Q32 14 10 8 Z" fill="#5d4037" stroke="#3e2723" strokeWidth="1.2" />
+        </svg>
+      </div>
     </div>
   );
 };
@@ -119,7 +170,7 @@ export default function Tile({
 }: TileProps) {
   const w = SQRT3 * size;
   const h = 2 * size;
-  const GAP = 0.975; // sand gap 2.5% - chill intersections, not floating
+  const GAP = 0.93; // tiles touch exactly, sand visible only on outer edge
   const displayW = w * GAP;
   const displayH = h * GAP;
   const [centerX, centerY] = center;

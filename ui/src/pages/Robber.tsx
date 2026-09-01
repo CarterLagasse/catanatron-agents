@@ -9,18 +9,21 @@ type RobberProps = {
   center: [number, number];
   size: number;
   coordinate: CubeCoordinate;
+  isDesert?: boolean;
 };
 
-export default function Robber({ center, size, coordinate }: RobberProps) {
+export default function Robber({ center, size, coordinate, isDesert }: RobberProps) {
   const [centerX, centerY] = center;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
+  const offsetX = isDesert ? 0 : -size * 0.49;
+  const offsetY = isDesert ? 0 : size * 0.08;
 
   return (
     <div
       className="robber"
       style={{
-        left: tileX,
-        top: tileY,
+        left: tileX + offsetX,
+        top: tileY + offsetY,
         width: size * 0.52,
         height: size * 0.62,
       }}

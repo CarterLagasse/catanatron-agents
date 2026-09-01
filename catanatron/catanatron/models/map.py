@@ -1,8 +1,9 @@
 import random
 import typing
 from collections import Counter, defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
+from typing import Literal
 
 from catanatron.models.coordinate_system import UNIT_VECTORS, Coordinate, Direction, add
 from catanatron.models.enums import (
@@ -51,11 +52,11 @@ NumberPlacement = Literal["official_spiral", "random"]
 
 @dataclass(frozen=True)
 class MapTemplate:
-    numbers: List[int]
-    port_resources: List[Union[FastResource, None]]
-    tile_resources: List[Union[FastResource, None]]
+    numbers: list[int]
+    port_resources: list[FastResource | None]
+    tile_resources: list[FastResource | None]
     topology: Mapping[
-        Coordinate, Union[Type[LandTile], Type[Water], Tuple[Type[Port], Direction]]
+        Coordinate, type[LandTile] | type[Water] | tuple[type[Port], Direction]
     ]
 
 
@@ -185,14 +186,14 @@ class CatanMap:
 
     def __init__(
         self,
-        tiles: Dict[Coordinate, Tile] = dict(),
-        land_tiles: Dict[Coordinate, LandTile] = dict(),
-        port_nodes: Dict[Union[FastResource, None], Set[int]] = dict(),
-        land_nodes: FrozenSet[NodeId] = frozenset(),
-        adjacent_tiles: Dict[int, List[LandTile]] = dict(),
-        node_production: Dict[NodeId, Counter] = dict(),
-        tiles_by_id: Dict[int, LandTile] = dict(),
-        ports_by_id: Dict[int, Port] = dict(),
+        tiles: dict[Coordinate, Tile] = dict(),
+        land_tiles: dict[Coordinate, LandTile] = dict(),
+        port_nodes: dict[FastResource | None, set[int]] = dict(),
+        land_nodes: frozenset[NodeId] = frozenset(),
+        adjacent_tiles: dict[int, list[LandTile]] = dict(),
+        node_production: dict[NodeId, Counter] = dict(),
+        tiles_by_id: dict[int, LandTile] = dict(),
+        ports_by_id: dict[int, Port] = dict(),
     ):
         self.tiles = tiles
         self.land_tiles = land_tiles
@@ -213,7 +214,7 @@ class CatanMap:
         return CatanMap.from_tiles(tiles)
 
     @staticmethod
-    def from_tiles(tiles: Dict[Coordinate, Tile]):
+    def from_tiles(tiles: dict[Coordinate, Tile]):
         self = CatanMap()
         self.tiles = tiles
 
@@ -239,8 +240,8 @@ class CatanMap:
 
 
 def init_port_nodes_cache(
-    tiles: Dict[Coordinate, Tile],
-) -> Dict[Union[FastResource, None], Set[int]]:
+    tiles: dict[Coordinate, Tile],
+) -> dict[FastResource | None, set[int]]:
     """Initializes board.port_nodes cache.
 
     Args:
@@ -262,8 +263,8 @@ def init_port_nodes_cache(
 
 
 def init_adjacent_tiles(
-    land_tiles: Dict[Coordinate, LandTile],
-) -> Dict[int, List[LandTile]]:
+    land_tiles: dict[Coordinate, LandTile],
+) -> dict[int, list[LandTile]]:
     adjacent_tiles = defaultdict(list)  # node_id => tile[3]
     for tile in land_tiles.values():
         for node_id in tile.nodes.values():
@@ -272,17 +273,17 @@ def init_adjacent_tiles(
 
 
 def init_node_production(
-    adjacent_tiles: Dict[int, List[LandTile]],
-) -> Dict[NodeId, Counter]:
+    adjacent_tiles: dict[int, list[LandTile]],
+) -> dict[NodeId, Counter]:
     """Returns node_id => Counter({WHEAT: 0.123, ...})"""
     node_production = dict()
-    for node_id in adjacent_tiles.keys():
+    for node_id in adjacent_tiles:
         node_production[node_id] = get_node_counter_production(adjacent_tiles, node_id)
     return node_production
 
 
 def get_node_counter_production(
-    adjacent_tiles: Dict[int, List[LandTile]], node_id: NodeId
+    adjacent_tiles: dict[int, list[LandTile]], node_id: NodeId
 ):
     tiles = adjacent_tiles[node_id]
     production = defaultdict(float)
@@ -313,7 +314,7 @@ def initialize_tiles(
     shuffled_port_resources_param=None,
     shuffled_tile_resources_param=None,
     number_placement: NumberPlacement = "official_spiral",
-) -> Dict[Coordinate, Tile]:
+) -> dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
     It first shuffles tiles, ports, and numbers. Then goes satisfying the
@@ -340,7 +341,7 @@ def initialize_tiles(
     )
 
     # for each topology entry, place a tile. keep track of nodes and edges
-    all_tiles: Dict[Coordinate, Tile] = {}
+    all_tiles: dict[Coordinate, Tile] = {}
     node_autoinc = 0
     tile_autoinc = 0
     port_autoinc = 0
@@ -460,8 +461,8 @@ def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):
             edges[edgeref] = edge_nodes  # type: ignore
 
     return (
-        typing.cast(Dict[NodeRef, NodeId], nodes),
-        typing.cast(Dict[EdgeRef, EdgeId], edges),
+        typing.cast(dict[NodeRef, NodeId], nodes),
+        typing.cast(dict[EdgeRef, EdgeId], edges),
         node_autoinc,
     )
 

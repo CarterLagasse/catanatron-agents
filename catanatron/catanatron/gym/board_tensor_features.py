@@ -1,19 +1,19 @@
 import networkx as nx
 import numpy as np
 
-from catanatron.state_functions import get_player_buildings
-from catanatron.models.player import Color
-from catanatron.game import Game
-from catanatron.models.enums import (
-    RESOURCES,
-    SETTLEMENT,
-    CITY,
-    ROAD,
-)
-from catanatron.models.coordinate_system import offset_to_cube
-from catanatron.models.board import STATIC_GRAPH
-from catanatron.models.map import number_probability
 from catanatron.features import get_feature_ordering, iter_players
+from catanatron.game import Game
+from catanatron.models.board import STATIC_GRAPH
+from catanatron.models.coordinate_system import offset_to_cube
+from catanatron.models.enums import (
+    CITY,
+    RESOURCES,
+    ROAD,
+    SETTLEMENT,
+)
+from catanatron.models.map import number_probability
+from catanatron.models.player import Color
+from catanatron.state_functions import get_player_buildings
 
 # These assume 4 players
 WIDTH = 21

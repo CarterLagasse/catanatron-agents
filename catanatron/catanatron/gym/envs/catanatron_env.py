@@ -1,27 +1,27 @@
-from typing import TypedDict, Union
 import random
-import gymnasium as gym
-from gymnasium import spaces
-import numpy as np
+from typing import TypedDict
 
-from catanatron.game import Game, TURNS_LIMIT
-from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.map import build_map
+import gymnasium as gym
+import numpy as np
+from gymnasium import spaces
+
 from catanatron.features import (
     create_sample,
     get_feature_ordering,
 )
-from catanatron.gym.envs.action_space import (
-    to_action_space,
-    from_action_space,
-    get_action_array,
-)
+from catanatron.game import TURNS_LIMIT, Game
 from catanatron.gym.board_tensor_features import (
     create_board_tensor,
     get_channels,
     is_graph_feature,
 )
-
+from catanatron.gym.envs.action_space import (
+    from_action_space,
+    get_action_array,
+    to_action_space,
+)
+from catanatron.models.map import build_map
+from catanatron.models.player import Color, Player, RandomPlayer
 
 FEATURES = get_feature_ordering(num_players=2)
 NUM_FEATURES = len(FEATURES)
@@ -188,7 +188,7 @@ class CatanatronEnv(gym.Env):
 
         return observation, info
 
-    def _get_observation(self) -> Union[np.ndarray, MixedObservation]:
+    def _get_observation(self) -> np.ndarray | MixedObservation:
         sample = create_sample(self.game, self.p0.color)
         if self.representation == "mixed":
             board_tensor = create_board_tensor(

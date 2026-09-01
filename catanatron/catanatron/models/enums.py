@@ -1,6 +1,6 @@
-from enum import Enum
 from collections import namedtuple
-from typing import List, Literal, Final
+from enum import Enum
+from typing import Final, Literal
 
 FastResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE"]
 FastDevCard = Literal[
@@ -15,14 +15,14 @@ BRICK: Final = "BRICK"
 SHEEP: Final = "SHEEP"
 WHEAT: Final = "WHEAT"
 ORE: Final = "ORE"
-RESOURCES: List[FastResource] = [WOOD, BRICK, SHEEP, WHEAT, ORE]
+RESOURCES: list[FastResource] = [WOOD, BRICK, SHEEP, WHEAT, ORE]
 
 KNIGHT: Final = "KNIGHT"
 YEAR_OF_PLENTY: Final = "YEAR_OF_PLENTY"
 MONOPOLY: Final = "MONOPOLY"
 ROAD_BUILDING: Final = "ROAD_BUILDING"
 VICTORY_POINT: Final = "VICTORY_POINT"
-DEVELOPMENT_CARDS: List[FastDevCard] = [
+DEVELOPMENT_CARDS: list[FastDevCard] = [
     KNIGHT,
     YEAR_OF_PLENTY,
     MONOPOLY,

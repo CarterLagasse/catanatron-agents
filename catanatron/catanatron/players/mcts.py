@@ -1,7 +1,7 @@
 import math
+import random
 import time
 from collections import defaultdict
-import random
 
 from catanatron.game import Game
 from catanatron.models.player import Player

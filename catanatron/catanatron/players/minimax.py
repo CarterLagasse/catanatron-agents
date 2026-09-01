@@ -1,5 +1,5 @@
-import time
 import random
+import time
 from typing import Any
 
 from catanatron.game import Game
@@ -9,7 +9,6 @@ from catanatron.players.value import (
     DEFAULT_WEIGHTS,
     get_value_fn,
 )
-
 
 ALPHABETA_DEFAULT_DEPTH = 2
 MAX_SEARCH_TIME_SECS = 20

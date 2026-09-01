@@ -5,19 +5,18 @@ of the code decoupled from state representation.
 """
 
 import random
-from typing import Optional
 
 from catanatron.models.decks import ROAD_COST_FREQDECK, freqdeck_add
 from catanatron.models.enums import (
-    VICTORY_POINT,
-    WOOD,
     BRICK,
-    SHEEP,
-    WHEAT,
-    ORE,
-    SETTLEMENT,
     CITY,
+    ORE,
     ROAD,
+    SETTLEMENT,
+    SHEEP,
+    VICTORY_POINT,
+    WHEAT,
+    WOOD,
     FastResource,
 )
 from catanatron.state import State
@@ -272,7 +271,7 @@ def buy_dev_card(state: State, color, dev_card):
     state.player_state[f"{key}_ORE_IN_HAND"] -= 1
 
 
-def player_num_resource_cards(state: State, color, card: Optional[FastResource] = None):
+def player_num_resource_cards(state: State, color, card: FastResource | None = None):
     key = player_key(state, color)
     if card is None:
         return (
