@@ -32,21 +32,12 @@
 // ===== Number Tokens
 .number-token,
 .port {
-  width: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
   font-weight: bold;
 
   position: relative;
-}
-
-@media screen and (min-width: variables.$sm-breakpoint) {
-  .number-token,
-  .port {
-    font-size: 1.3rem;
-  }
 }
 
 .MuiPaper-elevation3.number-token {

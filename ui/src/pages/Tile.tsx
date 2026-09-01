@@ -14,6 +14,7 @@ type NumberTokenProps = {
   className?: string;
   style?: Partial<React.CSSProperties>;
   flashing?: boolean;
+  size?: number;
 };
 
 export function NumberToken({
@@ -21,7 +22,12 @@ export function NumberToken({
   className,
   style,
   flashing,
+  size,
 }: NumberTokenProps) {
+  const s = size || 50;
+  const tokenSize = Math.round(s * 0.62);
+  const numFontSize = s * 0.3;
+  const pipFontSize = s * 0.15;
   return (
     <Paper
       elevation={3}
@@ -29,10 +35,10 @@ export function NumberToken({
         flashing: flashing,
         "number-token-red": number === 6 || number === 8,
       })}
-      style={style}
+      style={{ width: tokenSize, height: tokenSize, fontSize: numFontSize, ...style }}
     >
       <div>{number}</div>
-      <div className="pips">{numberToPips(number)}</div>
+      <div className="pips" style={{ fontSize: pipFontSize }}>{numberToPips(number)}</div>
     </Paper>
   );
 }
@@ -86,13 +92,13 @@ export const PortBoat = ({
 }) => {
   const is3to1 = !PORT_RESOURCES.includes(resource);
   const ratio = is3to1 ? "3:1" : "2:1";
-  const sailH = Math.round(size * 0.28);
-  const sailW = Math.round(size * 0.22);
-  const hullW = Math.round(size * 0.44);
-  const hullH = Math.round(size * 0.12);
-  const mastH = Math.round(size * 0.03);
-  const iconScale = is3to1 ? 0.30 : 0.26;
-  const ratioScale = is3to1 ? 0.28 : 0.22;
+  const sailH = Math.round(size * 0.36);
+  const sailW = Math.round(size * 0.28);
+  const hullW = Math.round(size * 0.56);
+  const hullH = Math.round(size * 0.16);
+  const mastH = Math.round(size * 0.04);
+  const iconScale = is3to1 ? 0.44 : 0.40;
+  const ratioScale = is3to1 ? 0.40 : 0.34;
   const mastExposed = Math.round(size * 0.06);
   const totalH = sailH + mastExposed + hullH;
   return (
@@ -183,7 +189,7 @@ export default function Tile({
   let showMotif: ResourceCard | null = null;
 
   if (tile.type === "RESOURCE_TILE") {
-    contents = <NumberToken number={tile.number} flashing={flashing} />;
+    contents = <NumberToken number={tile.number} flashing={flashing} size={size} />;
     hexFill = TERRAIN_COLORS[tile.resource];
     showMotif = tile.resource as ResourceCard;
   } else if (tile.type === "DESERT") {
@@ -196,9 +202,9 @@ export default function Tile({
     const vy = centerY - wy;
     const len = Math.hypot(vx, vy) || 1;
     const apothem = size * APOTHEM_FACTOR;
-    const dist = apothem * 0.45;
-    const bx = wx + (vx / len) * dist;
-    const by = wy + (vy / len) * dist;
+    const dist = apothem * 0.04;
+    const bx = wx - (vx / len) * dist;
+    const by = wy - (vy / len) * dist;
     return (
       <div
         key={`${coordinate}`}
