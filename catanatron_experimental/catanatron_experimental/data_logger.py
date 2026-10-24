@@ -47,7 +47,7 @@ class DataLogger:
                 [
                     game.id,
                     len(game.state.action_records),
-                    "http://localhost:3000/games/" + game.id,
+                    "http://localhost:4000/games/" + game.id,
                 ]
             )
 

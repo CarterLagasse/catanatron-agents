@@ -14,7 +14,7 @@ To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install
 docker compose up
 ```
 
-You should now be able to visit [http://localhost:3000](http://localhost:3000/) and play!
+You should now be able to visit [http://localhost:4000](http://localhost:4000/) and play!
 
 You can also (in a new terminal window) install the `[web]` subpackage and use the `--db` flag to make the catanatron-play simulator save the game in the database for inspection via the web server.
 

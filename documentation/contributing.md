@@ -48,7 +48,7 @@ This can also be run via Docker independently (after building):
 
 ```bash
 docker build -t bcollazo/catanatron-react-ui:latest ui/
-docker run -it -p 3000:3000 bcollazo/catanatron-react-ui
+docker run -it -p 4000:4000 bcollazo/catanatron-react-ui
 ```
 
 ### Flask Web Server

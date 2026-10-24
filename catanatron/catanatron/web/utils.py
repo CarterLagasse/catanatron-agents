@@ -12,9 +12,9 @@ def ensure_link(game, get_replay_link: bool = False):
     with database_session() as session:
         game_state = upsert_game_state(game, session)
         if get_replay_link:
-            url = f"http://localhost:3000/replays/{game_state.uuid}"
+            url = f"http://localhost:4000/replays/{game_state.uuid}"
         else:
-            url = f"http://localhost:3000/games/{game_state.uuid}/states/{game_state.state_index}"
+            url = f"http://localhost:4000/games/{game_state.uuid}/states/{game_state.state_index}"
 
     return url
 

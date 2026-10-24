@@ -127,7 +127,7 @@ Watch, inspect, and play games against Catanatron via the web UI.
    docker compose up
    ```
 
-3. Visit http://localhost:3000 in your browser!
+3. Visit http://localhost:4000 in your browser!
 
 ## Python Library
 
