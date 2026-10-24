@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -14,13 +14,14 @@ import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
 import { GridLoader } from "react-spinners";
 import {
   createGame,
+  getPpoAgents,
   type MapTemplate,
   type PlayerArchetype,
 } from "../utils/apiClient";
 
 import "./HomePage.scss";
 
-const PLAYER_ARCHETYPES: Array<{
+const BASE_PLAYER_ARCHETYPES: Array<{
   value: PlayerArchetype;
   label: string;
 }> = [
@@ -29,6 +30,18 @@ const PLAYER_ARCHETYPES: Array<{
   { value: "CATANATRON", label: "Catanatron" },
   { value: "WEIGHTED_RANDOM", label: "Weighted Random" },
 ];
+
+function ppoLabel(path: string): string {
+  // ppo_agents/ppo_training/first_agent/iter_1200.zip -> "PPO iter_1200 (first_agent)"
+  const parts = path.split("/");
+  const file = parts[parts.length - 1] || path;
+  const name = file.replace(/\.zip$/, "");
+  const folder = parts.length >= 3 ? parts[parts.length - 2] : "";
+  if (folder && folder !== "ppo_agents" && folder !== "ppo_training") {
+    return `PPO ${name} (${folder})`;
+  }
+  return `PPO ${name}`;
+}
 
 const MAP_TEMPLATES: MapTemplate[] = ["BASE", "MINI", "TOURNAMENT"];
 const PLAYER_COLORS = ["RED", "BLUE", "ORANGE", "WHITE"] as const;
@@ -49,9 +62,22 @@ export default function HomePage() {
     "HUMAN",
     "CATANATRON",
   ]);
+  const [ppoAgents, setPpoAgents] = useState<string[]>([]);
   const navigate = useNavigate();
   const humanCount = players.filter((player) => player === "HUMAN").length;
   const hasTooManyHumans = humanCount > 1;
+
+  useEffect(() => {
+    getPpoAgents().then(setPpoAgents);
+  }, []);
+
+  const PLAYER_ARCHETYPES = useMemo(() => {
+    const ppoOptions = ppoAgents.map((path) => ({
+      value: `PPO:${path}`,
+      label: ppoLabel(path),
+    }));
+    return [...BASE_PLAYER_ARCHETYPES, ...ppoOptions];
+  }, [ppoAgents]);
 
   const handlePlayerChange = (index: number, value: PlayerArchetype) => {
     if (

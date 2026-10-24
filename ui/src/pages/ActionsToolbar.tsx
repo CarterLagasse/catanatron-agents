@@ -520,7 +520,7 @@ function OptionsButton({
         anchorEl={anchorRef.current}
         role={undefined}
         transition
-        disablePortal
+        placement="top"
       >
         {({ TransitionProps, placement }) => (
           <Grow

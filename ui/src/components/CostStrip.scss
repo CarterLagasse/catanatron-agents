@@ -2,13 +2,17 @@
   display: flex;
   gap: 8px;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 6px 10px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 999px;
-  max-width: 560px;
+  max-width: 640px;
+  width: calc(100% - 24px);
   margin: 0 auto 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 .cost-item {

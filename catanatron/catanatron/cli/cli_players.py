@@ -10,6 +10,15 @@ from catanatron.players.search import VictoryPointPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 
+# PPO trained via catanatron/gym (optional, requires sb3-contrib)
+try:
+    from catanatron.gym.players import PpoPlayer  # noqa: F401
+
+    _PPO_AVAILABLE = True
+except ImportError:
+    _PPO_AVAILABLE = False
+    PpoPlayer = None  # type: ignore
+
 # Player must have a CODE, NAME, DESCRIPTION, CLASS.
 CliPlayer = namedtuple("CliPlayer", ["code", "name", "description", "import_fn"])
 CLI_PLAYERS = [
@@ -64,6 +73,28 @@ CLI_PLAYERS = [
         SameTurnAlphaBetaPlayer,
     ),
 ]
+
+# Append PPO if available (code PPO, params: path, representation, map_type, deterministic)
+if _PPO_AVAILABLE:
+
+    def _ppo_import_fn(color, *args):
+        # args: model_path, representation, map_type, deterministic
+        # Called as PPO, PPO:path, PPO:path:vector, PPO:path:vector:BASE:0
+        path = args[0] if len(args) >= 1 and args[0] else "ppo_catan_custom.zip"
+        rep = args[1] if len(args) >= 2 and args[1] else "vector"
+        map_t = args[2] if len(args) >= 3 and args[2] else "BASE"
+        det = args[3] if len(args) >= 4 else True
+        return PpoPlayer(color, model_path=path, representation=rep, map_type=map_t, deterministic=det)
+
+    CLI_PLAYERS.append(
+        CliPlayer(
+            "PPO",
+            "PpoPlayer",
+            "PPO trained via gym MaskablePPO .zip. Params: PATH, REPRESENTATION(vector/mixed), MAP(BASE/MINI/TOURNAMENT), DETERMINISTIC(1/0). "
+            "E.g. PPO:ppo_catan_custom.zip:vector:BASE:1",
+            _ppo_import_fn,
+        )
+    )
 
 
 def parse_cli_string(player_string):

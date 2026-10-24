@@ -9,6 +9,9 @@ import {
   type Tile,
 } from "../utils/api.types";
 
+// Extended type for tile motifs (includes DESERT which is not a ResourceCard)
+type TileMotif = ResourceCard | "DESERT";
+
 type NumberTokenProps = {
   number: number;
   className?: string;
@@ -97,8 +100,8 @@ export const PortBoat = ({
   const hullW = Math.round(size * 0.56);
   const hullH = Math.round(size * 0.16);
   const mastH = Math.round(size * 0.04);
-  const iconScale = is3to1 ? 0.44 : 0.40;
-  const ratioScale = is3to1 ? 0.40 : 0.34;
+  const iconScale = is3to1 ? 0.44 : 0.6;
+  const ratioScale = is3to1 ? 0.40 : 0.4;
   const mastExposed = Math.round(size * 0.06);
   const totalH = sailH + mastExposed + hullH;
   return (
@@ -125,12 +128,13 @@ export const PortBoat = ({
           <svg width={Math.round(sailH * iconScale)} height={Math.round(sailH * iconScale)} viewBox="0 0 24 24" aria-hidden>
             {resource === "WOOD" && <path d="M12 3 L6 14 H8 L5 19 H19 L16 14 H18 Z" fill="#1e5d29" stroke="#004405" strokeWidth="1.8" />}
             {resource === "BRICK" && <rect x="3" y="5" width="18" height="14" rx="1.5" fill="#e26427" stroke="#b84d1e" strokeWidth="1.8" />}
-            {resource === "SHEEP" && <ellipse cx="12" cy="13" rx="8" ry="5.5" fill="#8bb60e" stroke="#6a8a0b" strokeWidth="1.8" />}
-            {resource === "WHEAT" && <path d="M12 19 V5" stroke="#a86a0a" strokeWidth="2.5" strokeLinecap="round" />}
+            {resource === "SHEEP" && <ellipse cx="12" cy="13" rx="8" ry="5.5" fill="#ffffff" stroke="#999" strokeWidth="1.8" />}
+            {resource === "WHEAT" && <g><path d="M12 20 V8" stroke="#a86a0a" strokeWidth="2.2" strokeLinecap="round" /><ellipse cx="12" cy="5.5" rx="3" ry="4" fill="#f0b615" stroke="#a86a0a" strokeWidth="1.4" /></g>}
             {resource === "ORE" && <path d="M4 18 L12 4 L20 18 Z" fill="#9ba09c" stroke="#7d827f" strokeWidth="1.8" />}
           </svg>
           <span style={{
-            marginTop: -2,
+            marginTop: is3to1 ? -12 : -2,
+            marginLeft: is3to1 ? 1 : 1,
             fontSize: Math.round(sailH * ratioScale),
             fontWeight: 900,
             color: "#1e3d1e",
@@ -182,49 +186,94 @@ export default function Tile({
   const [centerX, centerY] = center;
   const [x, y] = tilePixelVector(coordinate, size, centerX, centerY);
 
-  if (tile.type === "WATER") return null;
-
   let contents: React.ReactNode = null;
   let hexFill: string | undefined;
-  let showMotif: ResourceCard | null = null;
+  let showMotif: TileMotif | null = null;
+  let terrainClass = "";
 
-  if (tile.type === "RESOURCE_TILE") {
-    contents = <NumberToken number={tile.number} flashing={flashing} size={size} />;
-    hexFill = TERRAIN_COLORS[tile.resource];
-    showMotif = tile.resource as ResourceCard;
-  } else if (tile.type === "DESERT") {
-    hexFill = TERRAIN_COLORS.DESERT;
-    showMotif = "DESERT" as ResourceCard;
-  } else if (tile.type === "PORT") {
-    // Harbor boat in ocean — no hex, just boat centered around board
-    const [wx, wy] = tilePixelVector(coordinate, size, centerX, centerY);
-    const vx = centerX - wx;
-    const vy = centerY - wy;
-    const len = Math.hypot(vx, vy) || 1;
-    const apothem = size * APOTHEM_FACTOR;
-    const dist = apothem * 0.04;
-    const bx = wx - (vx / len) * dist;
-    const by = wy - (vy / len) * dist;
-    return (
-      <div
-        key={`${coordinate}`}
-        className="tile--port-boat"
-        style={{ position: "absolute", left: bx, top: by, transform: "translate(-50%,-50%)", zIndex: 5 }}
-        aria-hidden
-      >
-        <PortBoat resource={tile.resource as ResourceCard} size={size} style={{ left: 0, top: 0 }} />
-      </div>
-    );
+  switch (tile.type) {
+    case "WATER": {
+      return null;
+    }
+    case "RESOURCE_TILE": {
+      contents = <NumberToken number={tile.number} flashing={flashing} size={size} />;
+      hexFill = TERRAIN_COLORS[tile.resource];
+      showMotif = tile.resource as ResourceCard;
+      terrainClass = `tile--${tile.resource.toLowerCase()}`;
+      break;
+    }
+    case "DESERT": {
+      hexFill = TERRAIN_COLORS.DESERT;
+      showMotif = "DESERT";
+      terrainClass = "tile--desert";
+      break;
+    }
+    case "PORT": {
+      // Harbor boat in ocean — no hex, just boat centered around board
+      const [wx, wy] = tilePixelVector(coordinate, size, centerX, centerY);
+      const vx = centerX - wx;
+      const vy = centerY - wy;
+      const len = Math.hypot(vx, vy) || 1;
+      const nx = vx / len;
+      const ny = vy / len;
+      const apothem = size * APOTHEM_FACTOR;
+      const dist = apothem * 0.04;
+      const bx = wx - nx * dist;
+      const by = wy - ny * dist;
+      // Find the two hex corners closest to the direction toward center
+      const centerAngle = Math.atan2(ny, nx);
+      const vertexAngles = [-Math.PI/2, -Math.PI/6, Math.PI/6, Math.PI/2, 5*Math.PI/6, 7*Math.PI/6];
+      const verts = vertexAngles.map((a) => {
+        const da = ((a - centerAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        return { x: wx + size * Math.cos(a), y: wy + size * Math.sin(a), da: Math.abs(da) };
+      }).sort((a, b) => a.da - b.da);
+      const shoreOffset = 4;
+      // Assign left/right based on cross product
+      const sorted = verts.slice(0, 2);
+      const cross0 = (sorted[0].x - wx) * ny - (sorted[0].y - wy) * nx;
+      const left = cross0 > 0 ? sorted[0] : sorted[1];
+      const right = cross0 > 0 ? sorted[1] : sorted[0];
+      const cLeft = { x: left.x - nx * shoreOffset, y: left.y - ny * shoreOffset };
+      const cRight = { x: right.x - nx * shoreOffset, y: right.y - ny * shoreOffset };
+      // End 20px closer to shore than before, left corner goes to left side, right to right
+      const endOffset = 20;
+      const perpX = -ny;
+      const perpY = nx;
+      const hullW = Math.round(size * 0.56);
+      const plankSpread = Math.round(hullW * 0.42);
+      const endLeftX = bx + nx * endOffset - perpX * plankSpread;
+      const endLeftY = by + ny * endOffset - perpY * plankSpread;
+      const endRightX = bx + nx * endOffset + perpX * plankSpread;
+      const endRightY = by + ny * endOffset + perpY * plankSpread;
+      const dockW = Math.max(4, size * 0.06 + 6);
+      // Center boat on hull, not bounding box
+      const sailH = Math.round(size * 0.36);
+      const mastExposed = Math.round(size * 0.06);
+      const hullH = Math.round(size * 0.16);
+      const totalH = sailH + mastExposed + hullH;
+      const hullCenterOffset = (totalH - hullH) / 2;
+      return (
+        <div key={`${coordinate}`} style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, zIndex: 2 }} aria-hidden>
+          {/* dock plank left: left corner → left side of boat */}
+          <svg style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+            <line x1={cLeft.x} y1={cLeft.y} x2={endLeftX} y2={endLeftY} stroke="#3e2723" strokeWidth={dockW + 3} strokeLinecap="butt" />
+            <line x1={cLeft.x} y1={cLeft.y} x2={endLeftX} y2={endLeftY} stroke="#5d4037" strokeWidth={dockW} strokeLinecap="butt" />
+          </svg>
+          {/* dock plank right: right corner → right side of boat */}
+          <svg style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+            <line x1={cRight.x} y1={cRight.y} x2={endRightX} y2={endRightY} stroke="#3e2723" strokeWidth={dockW + 3} strokeLinecap="butt" />
+            <line x1={cRight.x} y1={cRight.y} x2={endRightX} y2={endRightY} stroke="#5d4037" strokeWidth={dockW} strokeLinecap="butt" />
+          </svg>
+          <div
+            className="tile--port-boat"
+            style={{ position: "absolute", left: bx, top: by, transform: `translate(-50%, calc(-50% - ${hullCenterOffset}px))` }}
+          >
+            <PortBoat resource={tile.resource as ResourceCard} size={size} style={{ left: 0, top: 0 }} />
+          </div>
+        </div>
+      );
+    }
   }
-
-  const terrainClass =
-    tile.type === "RESOURCE_TILE"
-      ? `tile--${tile.resource.toLowerCase()}`
-      : tile.type === "DESERT"
-        ? "tile--desert"
-        : tile.type === "PORT"
-          ? `tile--port`
-          : "";
 
   return (
     <div

@@ -139,3 +139,14 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Model files (large binary files)
+*.zip
+ppo_agents/
+
+# Experiment tracking
+*.db
+catanatron_experimental/catanatron_experimental/optunatan.db
+
+# Package build artifacts
+*.egg-info/
+

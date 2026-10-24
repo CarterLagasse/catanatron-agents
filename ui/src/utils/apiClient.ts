@@ -7,7 +7,8 @@ export type PlayerArchetype =
   | "HUMAN"
   | "RANDOM"
   | "CATANATRON"
-  | "WEIGHTED_RANDOM";
+  | "WEIGHTED_RANDOM"
+  | string; // allows PPO:ppo_agents/... dynamic agents
 export type MapTemplate = "BASE" | "MINI" | "TOURNAMENT";
 export type StateIndex = number | `${number}` | "latest";
 
@@ -34,6 +35,16 @@ export async function createGame({
     friendly_robber: friendlyRobber,
   });
   return response.data.game_id;
+}
+
+export async function getPpoAgents(): Promise<string[]> {
+  try {
+    const response = await axios.get<{ agents: string[] }>(`${API_URL}/api/ppo-agents`);
+    return response.data.agents || [];
+  } catch (e) {
+    console.warn("Failed to fetch ppo agents", e);
+    return [];
+  }
 }
 
 export async function getState(

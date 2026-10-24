@@ -1,6 +1,8 @@
 import json
 import logging
+import re
 import traceback
+from pathlib import Path
 
 from flask import Blueprint, Response, abort, jsonify, request
 
@@ -17,18 +19,95 @@ from catanatron.web.models import get_game_state, upsert_game_state
 bp = Blueprint("api", __name__, url_prefix="/api")
 VALID_MAP_TEMPLATES = {"BASE", "MINI", "TOURNAMENT"}
 
+# ppo_agents folder at repo root (mounted as /app/ppo_agents in docker)
+PPO_AGENTS_ROOT = Path("ppo_agents")
+
+
+def _list_ppo_agents():
+    """List all .zip agents under ppo_agents (recursive, relative posix paths)."""
+    if not PPO_AGENTS_ROOT.exists():
+        return []
+    agents = []
+    for p in sorted(PPO_AGENTS_ROOT.rglob("*.zip")):
+        # return posix relative to repo root, e.g. ppo_agents/ppo_training/first_agent/iter_1200.zip
+        try:
+            rel = p.as_posix()
+            # ensure it starts with ppo_agents/
+            if not rel.startswith("ppo_agents/"):
+                rel = f"ppo_agents/{p.name}"
+            agents.append(rel)
+        except Exception:
+            continue
+    return agents
+
 
 def player_factory(player_key):
-    if player_key[0] == "CATANATRON":
-        return AlphaBetaPlayer(player_key[1], 2, True)
-    elif player_key[0] == "WEIGHTED_RANDOM":
-        return WeightedRandomPlayer(player_key[1])
-    elif player_key[0] == "RANDOM":
-        return RandomPlayer(player_key[1])
-    elif player_key[0] == "HUMAN":
-        return ValueFunctionPlayer(player_key[1], is_bot=False)
+    raw = player_key[0]
+    color = player_key[1]
+    # Handle PPO agents: "PPO" or "PPO:<path>[:rep[:map[:det]]]"
+    if isinstance(raw, str) and raw.startswith("PPO"):
+        # Split PPO prefix
+        parts = raw.split(":")
+        # parts[0] is "PPO"
+        path = None
+        if len(parts) >= 2 and parts[1]:
+            # Re-join remaining parts that are part of path if path contains colons (unlikely for posix)
+            # For PPO:path:rep:map:det, path is parts[1], rep parts[2], etc.
+            # Detect if parts[1] looks like a file path (contains / or endswith .zip)
+            path = parts[1]
+            # If path does not contain "/" and next parts look like rep/map, keep as is
+        else:
+            # No explicit path: pick most recent agent if available, else fallback
+            agents = _list_ppo_agents()
+            if agents:
+                path = sorted(agents)[-1]
+            else:
+                path = "ppo_agents/ppo_catan_custom.zip"
+        # Determine rep/map/det if provided as extra colon parts and not part of path
+        rep = "vector"
+        map_t = "BASE"
+        det = True
+        # Heuristic: if len(parts) >=3, check if parts[2] is rep
+        if len(parts) >= 3 and parts[2] in ("vector", "mixed"):
+            rep = parts[2]
+            if len(parts) >= 4 and parts[3] in ("BASE", "MINI", "TOURNAMENT"):
+                map_t = parts[3]
+                if len(parts) >= 5:
+                    det = parts[4].lower() not in ("0", "false", "no")
+            # path already parts[1]
+        elif len(parts) >= 3 and parts[2] in ("BASE", "MINI", "TOURNAMENT"):
+            map_t = parts[2]
+        # If path is just filename without dir, assume inside ppo_agents
+        if path and not path.startswith("ppo_agents/"):
+            # Allow bare filename like "iter_1200.zip" -> search under ppo_agents
+            cand = PPO_AGENTS_ROOT / path
+            if cand.exists():
+                path = cand.as_posix()
+            else:
+                # try find recursively
+                found = None
+                for p in PPO_AGENTS_ROOT.rglob(path):
+                    found = p.as_posix()
+                    break
+                if found:
+                    path = found
+        try:
+            from catanatron.gym.players import PpoPlayer
+
+            return PpoPlayer(color, model_path=path, representation=rep, map_type=map_t, deterministic=det)
+        except Exception as e:
+            logging.warning(f"Failed to load PpoPlayer {path}: {e}, fallback to RandomPlayer")
+            return RandomPlayer(color)
+    if raw == "CATANATRON":
+        return AlphaBetaPlayer(color, 2, True)
+    elif raw == "WEIGHTED_RANDOM":
+        return WeightedRandomPlayer(color)
+    elif raw == "RANDOM":
+        return RandomPlayer(color)
+    elif raw == "HUMAN":
+        return ValueFunctionPlayer(color, is_bot=False)
     else:
-        raise ValueError("Invalid player key")
+        raise ValueError(f"Invalid player key: {raw}")
 
 
 @bp.route("/games", methods=("POST",))
@@ -182,6 +261,17 @@ def mcts_analysis_endpoint(game_id, state_index):
             status=500,
             mimetype="application/json",
         )
+
+
+@bp.route("/ppo-agents", methods=["GET"])
+def list_ppo_agents_endpoint():
+    """List all available PPO agents in ppo_agents folder."""
+    try:
+        agents = _list_ppo_agents()
+        return jsonify({"agents": agents})
+    except Exception as e:
+        logging.error(f"Error listing ppo agents: {e}")
+        return jsonify({"agents": [], "error": str(e)})
 
 
 def _parse_state_index(state_index_str: str):

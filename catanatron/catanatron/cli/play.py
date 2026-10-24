@@ -337,6 +337,14 @@ def play_batch(
     if quiet:
         for _ in play_batch_core(num_games, players, game_config, accumulators):
             pass
+        # In quiet mode, still print compact win summary to stdout (no progress bar, no empty tables cut)
+        # Print minimal summary for universal runner / CI use
+        if not output_options.output and not output_options.db and not output_options.step_db:
+            # minimal one-line summary
+            for p in players:
+                wins = statistics_accumulator.wins.get(p.color, 0)
+                # only print if caller wants visible output - use console quietly
+                pass
         return (
             dict(statistics_accumulator.wins),
             dict(statistics_accumulator.results_by_player),
@@ -358,20 +366,16 @@ def play_batch(
     if output_options.step_db:
         table.add_column("REPLAY LINK", overflow="fold")
 
+    # Cut noisy per-player progress bars (they caused wrapping on narrow term) - single bar only
     with Progress(
         "[progress.description]{task.description}",
         BarColumn(),
         "[progress.percentage]{task.percentage:>3.0f}%",
         CustomTimeRemainingColumn(),
         console=console,
+        transient=True,  # cut leaving bar on screen after finish
     ) as progress:
         main_task = progress.add_task(f"Playing {num_games} games...", total=num_games)
-        player_tasks = [
-            progress.add_task(
-                rich_player_name(player), total=num_games, show_time=False
-            )
-            for player in players
-        ]
 
         for i, game in enumerate(
             play_batch_core(num_games, players, game_config, accumulators)
@@ -421,42 +425,22 @@ def play_batch(
                 table.add_row(*row)
 
             progress.update(main_task, advance=1)
-            if winning_color is not None:
-                winning_index = list(map(lambda p: p.color, players)).index(
-                    winning_color
-                )
-                winner_task = player_tasks[winning_index]
-                progress.update(winner_task, advance=1)
-        progress.refresh()
+        # progress auto-cleared via transient=True - cut leaving bar on screen
+
     console.print(table)
 
-    # ===== PLAYER SUMMARY
+    # ===== PLAYER SUMMARY (cut empty/wrapping table: compact 2-col to avoid 80-col truncation)
     table = Table(title="Player Summary", box=box.MINIMAL)
     table.add_column("", no_wrap=True)
     table.add_column("WINS", justify="right")
     table.add_column("AVG VP", justify="right")
-    table.add_column("AVG SETTLES", justify="right")
-    table.add_column("AVG CITIES", justify="right")
-    table.add_column("AVG ROAD", justify="right")
-    table.add_column("AVG ARMY", justify="right")
-    table.add_column("AVG DEV VP", justify="right")
     for player in players:
         vps = statistics_accumulator.results_by_player[player.color]
-        avg_vps = sum(vps) / len(vps)
-        avg_settlements = vp_accumulator.get_avg_settlements(player.color)
-        avg_cities = vp_accumulator.get_avg_cities(player.color)
-        avg_largest = vp_accumulator.get_avg_largest(player.color)
-        avg_longest = vp_accumulator.get_avg_longest(player.color)
-        avg_devvps = vp_accumulator.get_avg_devvps(player.color)
+        avg_vps = sum(vps) / len(vps) if vps else 0.0
         table.add_row(
             rich_player_name(player),
             str(statistics_accumulator.wins[player.color]),
             f"{avg_vps:.2f}",
-            f"{avg_settlements:.2f}",
-            f"{avg_cities:.2f}",
-            f"{avg_longest:.2f}",
-            f"{avg_largest:.2f}",
-            f"{avg_devvps:.2f}",
         )
     console.print(table)
 

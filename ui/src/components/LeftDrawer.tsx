@@ -82,8 +82,8 @@ export default function LeftDrawer() {
       <Hidden breakpoint={{ size: "md", direction: "up" }} implementation="js">
         <SwipeableDrawer
           className="left-drawer"
-          anchor="left"
-          open={state.isLeftDrawerOpen}
+          anchor="right"
+          open={state.isRightDrawerOpen}
           onClose={closeLeftDrawer}
           onOpen={openLeftDrawer}
           disableBackdropTransition={!iOS}
@@ -97,7 +97,7 @@ export default function LeftDrawer() {
         breakpoint={{ size: "md", direction: "down" }}
         implementation="css"
       >
-        <Drawer className="left-drawer" anchor="left" variant="permanent" open>
+        <Drawer className="left-drawer" anchor="right" variant="permanent" open>
           <DrawerContent gameState={state.gameState as GameState} />
         </Drawer>
       </Hidden>

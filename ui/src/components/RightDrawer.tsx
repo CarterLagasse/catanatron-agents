@@ -40,8 +40,8 @@ export default function RightDrawer( { children }: PropsWithChildren ) {
       <Hidden breakpoint={{ size: "md", direction: "up" }} implementation="js">
         <SwipeableDrawer
           className="right-drawer"
-          anchor="right"
-          open={state.isRightDrawerOpen}
+          anchor="left"
+          open={state.isLeftDrawerOpen}
           onClose={closeRightDrawer}
           onOpen={openRightDrawer}
           disableBackdropTransition={!iOS}
@@ -56,7 +56,7 @@ export default function RightDrawer( { children }: PropsWithChildren ) {
       <Hidden breakpoint={{ size: "md", direction: "down" }} implementation="css">
         <Drawer
           className="right-drawer"
-          anchor="right"
+          anchor="left"
           variant="permanent"
           open
         >

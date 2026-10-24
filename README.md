@@ -1,15 +1,65 @@
 # Catanatron
 
-[![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=main)](https://coveralls.io/github/bcollazo/catanatron?branch=main)
-[![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
-![Discord](https://img.shields.io/discord/1385302652014825552)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/main/examples/Overview.ipynb)
+> **Fork of [catanatron](https://github.com/bcollazo/catanatron) by Bryan Collazo**  
+> Original license: GPL-3.0-or-later (preserved)  
+> This fork includes experimental RL agents, UI improvements, and additional training infrastructure.
+
+## Changes in This Fork
+
+This repository is a local fork of the original [catanatron](https://github.com/bcollazo/catanatron) with the following additions and modifications:
+
+### Experimental RL Agents (`ppo_agents/`)
+- Pre-trained PPO (Proximal Policy Optimization) models for self-play
+- Training checkpoints at various iterations (200–5000)
+- Custom reward shaping and self-play configurations
+
+### Enhanced Web UI (`ui/`) — **Complete Rewrite (new_interface)**
+
+**Before (original):**
+
+![Original Catanatron UI](docs/source/_static/CatanatronUI.png)
+
+- Basic React + Material UI board rendering
+- Simple tile display with minimal styling
+- Static port representations
+- Desktop-only layout
+
+**After (new_interface):**
+
+![New Catanatron UI](docs/source/_static/new_interface.png)
+
+- **Tile rendering**: True Catan terrain colors matched to reference image (forest, hills, pasture, fields, mountains, desert, sea)
+- **Port/boat visualizations**: Animated harbor boats with resource-specific sails, masts, hulls, and dock planks connecting to hex corners
+- **Number tokens**: Red highlighting for 6/8, pip dots for probability visualization, flashing animation on roll
+- **Responsive layout**: Mobile-friendly homepage with proper scrolling, adaptive board scaling
+- **Component architecture**: Modular SCSS/TypeScript components (Tile, Board, ActionsToolbar, Prompt, Drawers, CostStrip)
+- **Interactive elements**: Clickable tiles, action toolbars, phase banners, left/right drawers for game state
+
+### Gymnasium Environment Extensions (`catanatron/catanatron/gym/`)
+- New adapters and policies for RL training
+- Custom player implementations
+- Vectorized environment support
+
+### Training Scripts (`examples/`)
+- `train_ppo_selfplay.py` - Self-play PPO training
+- `train_ppo_custom.py` - Custom reward PPO training
+- `train_ppo_pure.py` - Pure PPO baseline
+- `universal_runner.py` - Unified training runner
+
+### Experimental Module (`catanatron_experimental/`)
+- Hyperparameter optimization (Optuna, Ray Tune, SPSA)
+- MCTS score collection utilities
+- CLI players for testing
+
+### Game Logic Fixes
+- Deterministic discard handling
+- Road/ship building validation
+- Friendly robber game option
+- Block road extension through opponent settlements
+
+---
 
 Catanatron is a high-performance simulator and strong AI player for Settlers of Catan. You can run thousands of games in the order of seconds. The goal is to find the strongest Settlers of Catan bot possible.
-
-Get Started with the Full Documentation: https://docs.catanatron.com
-
-Join our Discord: https://discord.gg/FgFmb75TWd!
 
 ## Command Line Interface
 
@@ -64,13 +114,9 @@ catanatron-play --num 100 --output my-data-path/ --output-format json
 
 See more examples at https://docs.catanatron.com.
 
-## Graphical User Interface
+## Web UI (Docker)
 
-We provide Docker images so that you can watch, inspect, and play games against Catanatron via a web UI!
-
-<p align="left">
- <img src="https://raw.githubusercontent.com/bcollazo/catanatron/main/docs/source/_static/CatanatronUI.png">
-</p>
+Watch, inspect, and play games against Catanatron via the web UI.
 
 ### Installation
 
@@ -154,3 +200,7 @@ See more at: https://docs.catanatron.com
 ## Appendix
 
 See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https://medium.com/@bcollazo2010/5-ways-not-to-build-a-catan-ai-e01bc491af17).
+
+---
+
+*License: GPL-3.0-or-later (same as upstream). Original copyright Bryan Collazo.*

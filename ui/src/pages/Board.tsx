@@ -61,13 +61,16 @@ export default function Board({
   isMovingRobber,
   robberCoordinates,
 }: BoardProps) {
-  // Board container is .board-container (border-radius 18, inset shadow) - JS keeps in sync via window size minus toolbars/drawers
-  // Note: .board-container has 8px padding for sand rim, so subtract 16px from each dimension
-  const TOOLBAR_HEIGHT = 132; // .state-summary 68 + .actions-toolbar 64
-  const HEADER_HEIGHT = 48;
-  const DRAWER_OFFSET = isMobile ? 0 : 280;
-  const containerHeight = Math.max(360, height - TOOLBAR_HEIGHT - HEADER_HEIGHT - 24 - 16);
-  const containerWidth = Math.max(360, width - DRAWER_OFFSET - 24 - 16);
+  // Board container is .board-container - keep in sync with fixed CSS heights:
+  // PhaseBanner 40px + margins 14px + logo ~30px + CostStrip 36px+8px = ~128px header
+  // .state-summary 56px + .actions-toolbar 72px = 128px toolbars
+  // .board-container has 10px padding for sand rim, so subtract 20px + 24px gutters
+  const TOOLBAR_HEIGHT = 128; // .state-summary 56 + .actions-toolbar 72 (fixed via min-height)
+  const HEADER_HEIGHT = 128; // logo ~30 + PhaseBanner 40+14 + CostStrip 36+8 (all fixed)
+  const isDesktop = isMobile; // useMediaQuery(up("md")) true = desktop
+  const DRAWER_OFFSET = isDesktop ? 560 : 0;
+  const containerHeight = Math.max(360, height - TOOLBAR_HEIGHT - HEADER_HEIGHT - 24 - 20);
+  const containerWidth = Math.max(360, width - DRAWER_OFFSET - 24 - 20);
   const center: [number, number] = [containerWidth / 2, containerHeight / 2];
   const size = computeDefaultSize(containerWidth, containerHeight);
   if (!size) {
