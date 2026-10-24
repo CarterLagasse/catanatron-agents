@@ -88,9 +88,14 @@ class PurePpoActorCritic(nn.Module):
                 cnn_out = self.cnn(dummy).shape[1]
             self.cnn_fc = nn.Sequential(nn.Linear(cnn_out, 128), activation_fn())
             self.num_mlp = nn.Sequential(
-                nn.Linear(n_num, 64), activation_fn(), nn.Linear(64, 64), activation_fn()
+                nn.Linear(n_num, 64),
+                activation_fn(),
+                nn.Linear(64, 64),
+                activation_fn(),
             )
-            self.fusion = nn.Sequential(nn.Linear(128 + 64, features_dim), activation_fn())
+            self.fusion = nn.Sequential(
+                nn.Linear(128 + 64, features_dim), activation_fn()
+            )
             trunk_input = features_dim
         else:
             n_input = int(observation_space.shape[0])

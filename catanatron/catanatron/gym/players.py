@@ -89,9 +89,13 @@ class PpoPlayer(Player):
         self.verbose = bool(verbose)
 
         if self.representation not in ("vector", "mixed"):
-            raise ValueError(f"representation must be vector or mixed, got {self.representation}")
+            raise ValueError(
+                f"representation must be vector or mixed, got {self.representation}"
+            )
         if self.map_type not in ("BASE", "MINI", "TOURNAMENT"):
-            raise ValueError(f"map_type must be BASE/MINI/TOURNAMENT, got {self.map_type}")
+            raise ValueError(
+                f"map_type must be BASE/MINI/TOURNAMENT, got {self.map_type}"
+            )
 
         if not _SB3_AVAILABLE:
             raise ImportError(
@@ -101,10 +105,18 @@ class PpoPlayer(Player):
 
         # Normalize existence check: SB3 adds .zip if missing, so check both forms without double suffix
         def _exists(p):
-            return os.path.isfile(p) or os.path.isfile(p + ".zip") or os.path.isfile(p.rstrip(".zip"))
+            return (
+                os.path.isfile(p)
+                or os.path.isfile(p + ".zip")
+                or os.path.isfile(p.rstrip(".zip"))
+            )
 
         # Helper to strip .zip for alternative check
-        alt = self.model_path[:-4] if self.model_path.endswith(".zip") else self.model_path + ".zip"
+        alt = (
+            self.model_path[:-4]
+            if self.model_path.endswith(".zip")
+            else self.model_path + ".zip"
+        )
         if not os.path.isfile(self.model_path) and not os.path.isfile(alt):
             msg = (
                 f"[PpoPlayer] Model not found at '{self.model_path}' (also tried '{alt}'). "
@@ -172,7 +184,9 @@ class PpoPlayer(Player):
                     from catanatron.models.player import RandomPlayer
 
                     # pick colors distinct from BLUE
-                    extra_colors = [Color.RED, Color.ORANGE, Color.WHITE][: n_players - 1]
+                    extra_colors = [Color.RED, Color.ORANGE, Color.WHITE][
+                        : n_players - 1
+                    ]
                     enemies = [RandomPlayer(c) for c in extra_colors]
                     tmp_env = gym.make(
                         "catanatron/Catanatron-v0",
@@ -183,7 +197,10 @@ class PpoPlayer(Player):
                         },
                     )
                 tmp_env = ActionMasker(tmp_env, catan_mask_fn)
-                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
                     model = MaskablePPO.load(load_path, env=tmp_env, verbose=0)
                 # Verify obs compatibility by checking model's observation_space size matches tmp_env
                 # If mismatch, MaskablePPO.load would have warned but not errored; we check manually
@@ -206,7 +223,10 @@ class PpoPlayer(Player):
             import contextlib
             import io
 
-            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
                 self.model = MaskablePPO.load(load_path, verbose=0)
             self._tmp_env = None
             self._n_players_hint = 2
@@ -241,7 +261,9 @@ class PpoPlayer(Player):
             board = create_board_tensor(game, self.color, channels_first=True)
             numeric_features = _cached_numeric_features(num_players, map_type)
             sample = create_sample(game, self.color)
-            numeric = np.array([float(sample[f]) for f in numeric_features], dtype=np.float32)
+            numeric = np.array(
+                [float(sample[f]) for f in numeric_features], dtype=np.float32
+            )
             obs = {"board": board.astype(np.float32), "numeric": numeric}
         else:
             features = _cached_features(num_players, map_type)
@@ -255,7 +277,9 @@ class PpoPlayer(Player):
             action_array = get_action_array(tuple(game.state.colors), map_type)
         except Exception:
             # Fallback to configured 2p if game colors mismatch training
-            action_array = get_action_array(tuple(sorted(game.state.colors, key=lambda c: c.value)), map_type)
+            action_array = get_action_array(
+                tuple(sorted(game.state.colors, key=lambda c: c.value)), map_type
+            )
 
         # Map each playable Action to its int
         valid_ints = []
@@ -278,16 +302,24 @@ class PpoPlayer(Player):
         # Predict with masking. MaskablePPO expects action_masks bool array.
         # Use deterministic for evaluation; stochastic for training-like play if requested.
         try:
-            action_int, _ = self.model.predict(obs, action_masks=mask, deterministic=self.deterministic)
+            action_int, _ = self.model.predict(
+                obs, action_masks=mask, deterministic=self.deterministic
+            )
         except Exception as e:
             # Fallback: try without action_masks wrapping (older SB3compat)
             if self.verbose:
                 print(f"[PpoPlayer] predict with mask failed {e}, trying without")
             action_int, _ = self.model.predict(obs, deterministic=self.deterministic)
             # Ensure sampled action is valid
-            action_int = int(action_int) if np.ndim(action_int) == 0 else int(action_int[0])
+            action_int = (
+                int(action_int) if np.ndim(action_int) == 0 else int(action_int[0])
+            )
 
-        action_int = int(action_int) if np.ndim(action_int) == 0 else int(np.asarray(action_int).flat[0])
+        action_int = (
+            int(action_int)
+            if np.ndim(action_int) == 0
+            else int(np.asarray(action_int).flat[0])
+        )
 
         # Convert back to Action using same array and this player's color
         try:
@@ -296,20 +328,29 @@ class PpoPlayer(Player):
             )
         except Exception:
             catan_action = from_action_space(
-                action_int, self.color, tuple(sorted(game.state.colors, key=lambda c: c.value)), map_type
+                action_int,
+                self.color,
+                tuple(sorted(game.state.colors, key=lambda c: c.value)),
+                map_type,
             )
 
         # Safety: if model returned an invalid action (should not with masking), fallback to valid
         if catan_action not in playable_actions:
             # Find closest valid by mask
             if self.verbose:
-                print(f"[PpoPlayer] predicted invalid {catan_action} valid ints {valid_ints}, fallback to first valid")
+                print(
+                    f"[PpoPlayer] predicted invalid {catan_action} valid ints {valid_ints}, fallback to first valid"
+                )
             # Return the highest-prob valid action by re-querying masked logits is complex; fallback to first valid
             # Could also sample from valid_ints uniformly
             # Try to map mask index back: if action_array[action_int] not in valid, pick first valid
             catan_action = playable_actions[0]
             # Try to find action whose (type,value) equals action_array[action_int]
-            key = action_array[action_int] if 0 <= action_int < len(action_array) else None
+            key = (
+                action_array[action_int]
+                if 0 <= action_int < len(action_array)
+                else None
+            )
             for pa in playable_actions:
                 if (pa.action_type, pa.value) == key:
                     catan_action = pa

@@ -84,7 +84,13 @@ if _PPO_AVAILABLE:
         rep = args[1] if len(args) >= 2 and args[1] else "vector"
         map_t = args[2] if len(args) >= 3 and args[2] else "BASE"
         det = args[3] if len(args) >= 4 else True
-        return PpoPlayer(color, model_path=path, representation=rep, map_type=map_t, deterministic=det)
+        return PpoPlayer(
+            color,
+            model_path=path,
+            representation=rep,
+            map_type=map_t,
+            deterministic=det,
+        )
 
     CLI_PLAYERS.append(
         CliPlayer(

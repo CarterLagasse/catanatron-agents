@@ -339,7 +339,11 @@ def play_batch(
             pass
         # In quiet mode, still print compact win summary to stdout (no progress bar, no empty tables cut)
         # Print minimal summary for universal runner / CI use
-        if not output_options.output and not output_options.db and not output_options.step_db:
+        if (
+            not output_options.output
+            and not output_options.db
+            and not output_options.step_db
+        ):
             # minimal one-line summary
             for p in players:
                 wins = statistics_accumulator.wins.get(p.color, 0)

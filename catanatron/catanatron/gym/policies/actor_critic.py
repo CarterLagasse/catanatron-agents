@@ -77,7 +77,9 @@ class CatanMixedExtractor(BaseFeaturesExtractor):
         # Infer shapes from spaces
         board_space = observation_space.spaces["board"]  # Box(channels,21,11)
         numeric_space = observation_space.spaces["numeric"]  # Box(n_numeric)
-        in_channels = int(board_space.shape[0]) if board_channels is None else board_channels
+        in_channels = (
+            int(board_space.shape[0]) if board_channels is None else board_channels
+        )
         n_numeric = int(numeric_space.shape[0])
 
         # Board CNN branch: (C,21,11) -> conv -> flatten

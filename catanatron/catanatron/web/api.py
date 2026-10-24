@@ -94,9 +94,17 @@ def player_factory(player_key):
         try:
             from catanatron.gym.players import PpoPlayer
 
-            return PpoPlayer(color, model_path=path, representation=rep, map_type=map_t, deterministic=det)
+            return PpoPlayer(
+                color,
+                model_path=path,
+                representation=rep,
+                map_type=map_t,
+                deterministic=det,
+            )
         except Exception as e:
-            logging.warning(f"Failed to load PpoPlayer {path}: {e}, fallback to RandomPlayer")
+            logging.warning(
+                f"Failed to load PpoPlayer {path}: {e}, fallback to RandomPlayer"
+            )
             return RandomPlayer(color)
     if raw == "CATANATRON":
         return AlphaBetaPlayer(color, 2, True)
