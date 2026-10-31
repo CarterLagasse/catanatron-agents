@@ -20,6 +20,7 @@ dependencies = ["networkx", "click", "rich"]
 
 [project.optional-dependencies]
 gym = ["gymnasium<=0.29.1", "numpy", "pandas", "fastparquet", "pygame"]
+jax = ["jax", "optax", "numpy"]
 web = [
     "gunicorn",
     "flask",

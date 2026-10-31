@@ -142,6 +142,7 @@ dmypy.json
 # Model files (large binary files)
 *.zip
 ppo_agents/
+runs/
 
 # Experiment tracking
 *.db

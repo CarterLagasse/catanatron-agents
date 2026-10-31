@@ -103,6 +103,24 @@ if _PPO_AVAILABLE:
     )
 
 
+def _jax_import_fn(color, *args):
+    # Imported lazily so the CLI works without the optional jax dependency.
+    from catanatron.jax_rl.jax_player import JaxPlayer
+
+    return JaxPlayer(color, *args)
+
+
+CLI_PLAYERS.append(
+    CliPlayer(
+        "JAX",
+        "JaxPlayer",
+        "Agent trained with catanatron.jax_rl. Params: PATH (.npz checkpoint or PSRO run dir), GREEDY(1/0). "
+        "E.g. JAX:runs/ppo/best.npz:1",
+        _jax_import_fn,
+    )
+)
+
+
 def parse_cli_string(player_string):
     players = []
     player_keys = player_string.split(",")

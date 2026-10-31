@@ -40,7 +40,12 @@ This repository is a local fork of the original [catanatron](https://github.com/
 - Custom player implementations
 - Vectorized environment support
 
-### Training Scripts (`examples/`)
+### Pure-JAX Training (`catanatron/catanatron/jax_rl/`)
+- 1v1 game rules reimplemented in JAX and checked move by move against the Python engine
+- PPO and PSRO pipelines with no PyTorch or Stable-Baselines3 dependency
+- This is the recommended way to train; see its [README](catanatron/catanatron/jax_rl/README.md)
+
+### Legacy Training Scripts (`examples/`, PyTorch + SB3)
 - `train_ppo_selfplay.py` - Self-play PPO training
 - `train_ppo_custom.py` - Custom reward PPO training
 - `train_ppo_pure.py` - Pure PPO baseline
