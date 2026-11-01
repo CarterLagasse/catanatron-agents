@@ -19,15 +19,22 @@ export default function Robber({ center, size, coordinate, isDesert }: RobberPro
       style={{
         left: tileX + offsetX,
         top: tileY + offsetY,
-        width: size * 0.52,
-        height: size * 0.62,
+        width: size * 0.6,
+        height: size * 0.84,
       }}
       title="Robber"
       aria-label="Robber"
     >
-      <svg viewBox="0 0 24 32" width="100%" height="100%" aria-hidden style={{ display: "block", filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.35))" }}>
-        {/* minimalist pawn - flat, single tone, no belt/highlight/base ring */}
-        <path d="M12 3.5 A5.5 5.5 0 1 0 12 14.5 A5.5 5.5 0 1 0 12 3.5 Z M9.4 14.8 L7.6 24.4 L12 26.2 L16.4 24.4 L14.6 14.8 Z M7.8 26.2 Q12 28.2 16.2 26.2 L15.6 27.6 Q12 29 8.4 27.6 Z" fill="#3a3f45" stroke="#1a1d22" strokeWidth="1.1" strokeLinejoin="round" />
+      <svg viewBox="0 0 40 56" width="100%" height="100%" aria-hidden className="robber-art">
+        <ellipse cx="20" cy="51" rx="16" ry="4.4" fill="rgba(0,0,0,0.38)" />
+        <g stroke="#14181d" strokeWidth="1.5" strokeLinejoin="round">
+          <ellipse cx="20" cy="46" rx="13.5" ry="5.2" fill="#2c323a" />
+          <path d="M12 45C13.5 35 16 29 17 24h6c1 5 3.5 11 5 21 0 3-16 3-16 0Z" fill="#4c555f" />
+          <ellipse cx="20" cy="24" rx="7.6" ry="2.8" fill="#6a7480" />
+          <circle cx="20" cy="14" r="9.4" fill="#4c555f" />
+        </g>
+        <path d="M23 25c1 5 3.6 11 5 20 0 1.6-4.4 2.5-8 2.5C24 40 23.4 31 23 25Z" fill="#343b44" />
+        <path d="M14.2 8.6A8 8 0 0 1 20 6a3 3 0 0 1 0 2.4 6 6 0 0 0-3.8 2.2 2 2 0 0 1-2-2Z" fill="#7f8a96" />
       </svg>
     </div>
   );

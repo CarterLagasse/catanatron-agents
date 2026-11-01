@@ -4,8 +4,9 @@
   gap: 14px;
   min-height: 58px;
   padding: 7px 14px;
-  background: var(--panel);
+  background: linear-gradient(180deg, #1b3041, #14232f);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 20;
 }
@@ -75,10 +76,15 @@
     background: var(--ink-3);
   }
   &.you {
-    border-color: rgba(242, 182, 50, 0.7);
-    background: rgba(242, 182, 50, 0.12);
+    border-color: var(--gold);
+    background: var(--gold);
+    color: var(--gold-ink);
+    box-shadow: 0 2px 10px rgba(242, 182, 50, 0.35);
+    small {
+      color: #5d4510;
+    }
     .status-dot {
-      background: var(--gold);
+      background: var(--gold-ink);
       animation: status-pulse 1.3s ease-in-out infinite;
     }
   }
@@ -89,12 +95,12 @@
 
 @keyframes status-pulse {
   50% {
-    box-shadow: 0 0 0 6px rgba(242, 182, 50, 0);
+    box-shadow: 0 0 0 5px rgba(36, 26, 0, 0);
     transform: scale(1.2);
   }
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(242, 182, 50, 0.6);
+    box-shadow: 0 0 0 0 rgba(36, 26, 0, 0.5);
   }
 }
 

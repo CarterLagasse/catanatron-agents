@@ -14,19 +14,24 @@ import "./Scoreboard.scss";
 function Stat({
   icon,
   value,
+  caption,
   label,
   active,
 }: {
   icon: React.ReactNode;
   value: number | string;
+  caption: string;
   label: string;
   active?: boolean;
 }) {
   return (
     <Tooltip title={label} arrow>
       <span className={cn("stat", { active })}>
-        {icon}
-        <b>{value}</b>
+        <span className="stat-value">
+          {icon}
+          <b>{value}</b>
+        </span>
+        <small>{caption}</small>
       </span>
     </Tooltip>
   );
@@ -43,7 +48,7 @@ export default function Scoreboard({
 }) {
   const human = getHumanColor(gs);
   return (
-    <section className="scoreboard" aria-label="Scoreboard">
+    <section className={cn("scoreboard", { crowded: gs.colors.length > 2 })} aria-label="Scoreboard">
       {gs.colors.map((color) => {
         const key = playerKey(gs, color);
         const state = gs.player_state;
@@ -52,7 +57,6 @@ export default function Scoreboard({
         const cards = cardCount(gs, color);
         const devCards = devCardCount(gs, color);
         const overLimit = cards > gs.discard_limit;
-        const progress = Math.min(100, (vps / gs.vps_to_win) * 100);
         const isCurrent = gs.current_color === color && !gs.winning_color;
         return (
           <article
@@ -63,52 +67,65 @@ export default function Scoreboard({
             })}
           >
             <header>
-              <span className="swatch" aria-hidden />
-              <span className="player-name" title={name(color)}>
-                {name(color)}
+              <span className="player-hex" aria-hidden>
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 1.5 21.1 6.75V17.25L12 22.5 2.9 17.25V6.75Z" />
+                  <path d="M7 18v-6l5-4.6 5 4.6v6Z" className="player-house" />
+                </svg>
               </span>
-              {isCurrent && <span className="turn-tag">Playing</span>}
+              <span className="player-title">
+                <span className="player-name" title={name(color)}>
+                  {name(color)}
+                </span>
+                {isCurrent && <span className="turn-tag">Playing now</span>}
+                {gs.winning_color === color && <span className="turn-tag">Winner</span>}
+                {!open && !isCurrent && (
+                  <Tooltip title="Their hand and any hidden victory points are secret" arrow>
+                    <span className="secret" aria-label="Hidden information">
+                      <VisibilityOffIcon fontSize="inherit" /> Hidden hand
+                    </span>
+                  </Tooltip>
+                )}
+              </span>
               <span className="vp" aria-label={`${vps} of ${gs.vps_to_win} victory points`}>
                 <strong>{vps}</strong>
                 <small>/{gs.vps_to_win}</small>
               </span>
             </header>
             <div className="vp-track" aria-hidden>
-              <span style={{ width: `${progress}%` }} />
+              {Array.from({ length: gs.vps_to_win }, (_, i) => (
+                <span key={i} className={cn({ on: i < vps })} />
+              ))}
             </div>
             <div className="stats">
               <Stat
                 icon={<StyleIcon fontSize="inherit" />}
                 value={cards}
+                caption="Cards"
                 label={overLimit ? `${cards} cards: over the discard limit of ${gs.discard_limit}` : `${cards} resource cards`}
                 active={overLimit}
               />
-              <Stat icon={<span className="dev-glyph" />} value={devCards} label={`${devCards} development cards`} />
+              <Stat icon={<span className="dev-glyph" />} value={devCards} caption="Dev" label={`${devCards} development cards`} />
               <Stat
                 icon={<MilitaryTechIcon fontSize="inherit" />}
                 value={state[`${key}_PLAYED_KNIGHT`] ?? 0}
+                caption={state[`${key}_HAS_ARMY`] ? "Top army" : "Knights"}
                 label={state[`${key}_HAS_ARMY`] ? "Largest Army: worth 2 points" : "Knights played"}
                 active={!!state[`${key}_HAS_ARMY`]}
               />
               <Stat
                 icon={<RouteIcon fontSize="inherit" />}
                 value={state[`${key}_LONGEST_ROAD_LENGTH`] ?? 0}
+                caption={state[`${key}_HAS_ROAD`] ? "Top road" : "Road"}
                 label={state[`${key}_HAS_ROAD`] ? "Longest Road: worth 2 points" : "Longest road length"}
                 active={!!state[`${key}_HAS_ROAD`]}
               />
-              {!open && (
-                <Tooltip title="Their hand and any hidden victory points are secret" arrow>
-                  <span className="secret" aria-label="Hidden information">
-                    <VisibilityOffIcon fontSize="inherit" />
-                  </span>
-                </Tooltip>
-              )}
             </div>
             {open && color !== human && (
               <div className="revealed">
                 {RESOURCES.map((resource) => (
                   <span key={resource}>
-                    <ResourceIcon resource={resource} size={14} />
+                    <ResourceIcon resource={resource} size={16} />
                     {hand(gs, color)[resource]}
                   </span>
                 ))}

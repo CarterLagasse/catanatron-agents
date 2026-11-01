@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import cn from "classnames";
 import { Tooltip } from "@mui/material";
 
@@ -9,6 +9,7 @@ import { buildLog } from "../utils/gameLog";
 import { getHumanColor } from "../utils/stateUtils";
 import type { RollGains } from "../utils/gameLogic";
 import AnalysisBox from "./AnalysisBox";
+import BankTray from "./BankTray";
 import { Die } from "./DiceRoll";
 import ResourceIcon from "./ResourceIcon";
 import Scoreboard from "./Scoreboard";
@@ -99,7 +100,7 @@ function DiceChart({ gameState }: { gameState: GameState }) {
   );
 }
 
-function Stats({ gameState: gs, name }: { gameState: GameState; name: (color: Color) => string }) {
+function Stats({ gameState: gs }: { gameState: GameState }) {
   const human = getHumanColor(gs);
   const yours = human ? income(gs, human) : null;
   const total = yours ? Object.values(yours).reduce((sum, value) => sum + value, 0) : 0;
@@ -122,22 +123,6 @@ function Stats({ gameState: gs, name }: { gameState: GameState; name: (color: Co
           </ul>
         </section>
       )}
-      <section>
-        <h4>Bank</h4>
-        <ul className="income">
-          {RESOURCES.map((resource) => (
-            <li key={resource} title={`${RESOURCE_NAMES[resource]} left in the bank`}>
-              <ResourceIcon resource={resource} size={20} />
-              <b>{gs.bank?.[resource] ?? "?"}</b>
-            </li>
-          ))}
-          <li title="Development cards left">
-            <span className="dev-mini" />
-            <b>{gs.dev_cards_left ?? "?"}</b>
-          </li>
-        </ul>
-      </section>
-      <p className="stats-note">Playing as {human ? name(human) : "a spectator"}.</p>
     </div>
   );
 }
@@ -160,6 +145,14 @@ export default function SidePanel({
   footer?: ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("log");
+  const tabBody = useRef<HTMLDivElement>(null);
+  const followNewest = useRef(true);
+  const moves = gameState.action_records.length;
+  useLayoutEffect(() => {
+    if (tab === "log" && followNewest.current && tabBody.current) {
+      tabBody.current.scrollTop = tabBody.current.scrollHeight;
+    }
+  }, [tab, moves]);
   const tabs: { id: Tab; label: string }[] = [
     { id: "log", label: "Log" },
     { id: "stats", label: "Stats" },
@@ -167,6 +160,7 @@ export default function SidePanel({
   return (
     <div className="side-panel-inner">
       <Scoreboard gameState={gameState} name={name} revealHidden={revealHidden} />
+      <BankTray gameState={gameState} />
       <AnalysisBox stateIndex={analysisIndex} name={name} />
       <div className="tab-row" role="tablist">
         {tabs.map(({ id, label }) => (
@@ -181,9 +175,17 @@ export default function SidePanel({
           </button>
         ))}
       </div>
-      <div className="tab-body">
+      <div
+        className="tab-body"
+        ref={tabBody}
+        onScroll={({ currentTarget: body }) => {
+          if (tab === "log") {
+            followNewest.current = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
+          }
+        }}
+      >
         {tab === "log" && <GameLog gameState={gameState} name={name} gainsByRecord={gainsByRecord} />}
-        {tab === "stats" && <Stats gameState={gameState} name={name} />}
+        {tab === "stats" && <Stats gameState={gameState} />}
       </div>
       {footer}
     </div>

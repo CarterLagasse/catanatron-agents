@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
+  padding: 12px 12px 8px;
 }
 
 .score-card {
@@ -13,14 +13,17 @@
   &.white { --player: var(--white-piece); }
 
   padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--panel-2);
+  border-radius: 14px;
+  background:
+    linear-gradient(105deg, color-mix(in srgb, var(--player) 20%, transparent), transparent 62%),
+    var(--panel-2);
   border: 1px solid var(--line);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 
   &.current {
     border-color: var(--player);
-    box-shadow: 0 0 0 1px var(--player);
+    box-shadow: 0 0 0 1px var(--player), 0 3px 14px color-mix(in srgb, var(--player) 35%, transparent);
   }
   &.winner {
     border-color: var(--gold);
@@ -30,37 +33,59 @@
   header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
   }
-  .swatch {
+  .player-hex {
     flex: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 4px;
-    background: var(--player);
-    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+    width: 34px;
+    height: 34px;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+    svg {
+      display: block;
+      fill: var(--player);
+      stroke: var(--player);
+      stroke-width: 1.2;
+      stroke-linejoin: round;
+    }
+    .player-house {
+      fill: rgba(255, 255, 255, 0.92);
+      stroke: none;
+    }
+  }
+  &.white .player-house {
+    fill: #54606b;
+  }
+  .player-title {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
   }
   .player-name {
-    font-weight: 800;
-    min-width: 0;
+    font: 600 1.04rem var(--font-display);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .turn-tag {
-    flex: none;
-    font-size: 0.66rem;
+    color: var(--ink);
+    font-size: 0.7rem;
     font-weight: 800;
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--ink-2);
+    opacity: 0.85;
+  }
+  .secret {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--ink-3);
+    font-size: 0.7rem;
+    font-weight: 700;
   }
   .vp {
     margin-left: auto;
     flex: none;
     strong {
-      font: 600 1.45rem var(--font-display);
+      font: 600 1.75rem/1 var(--font-display);
     }
     small {
       color: var(--ink-3);
@@ -71,42 +96,61 @@
 }
 
 .vp-track {
-  height: 5px;
-  border-radius: 999px;
-  margin: 6px 0 8px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+  display: flex;
+  gap: 2px;
+  margin: 8px 0;
   span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--player);
-    transition: width 300ms ease;
+    flex: 1;
+    height: 6px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.09);
+    transition: background 300ms ease;
+    &.on {
+      background: var(--player);
+    }
   }
 }
 
 .stats {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
   color: var(--ink-2);
   font-size: 0.95rem;
 
   .stat {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 4px;
+    padding: 4px 2px 3px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.18);
     cursor: default;
+
+    small {
+      color: var(--ink-3);
+      font-size: 0.64rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
     b {
-      font-size: 0.85rem;
+      font: 600 0.95rem var(--font-display);
       color: var(--ink);
     }
     &.active {
+      background: rgba(242, 182, 50, 0.16);
+      box-shadow: inset 0 0 0 1px rgba(242, 182, 50, 0.5);
       color: var(--gold);
-      b {
+      b,
+      small {
         color: var(--gold);
       }
     }
+  }
+  .stat-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
   .dev-glyph {
     width: 10px;
@@ -115,10 +159,31 @@
     background: linear-gradient(160deg, #8d6bd8, #5a3ea8);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
   }
-  .secret {
-    margin-left: auto;
-    display: inline-flex;
-    color: var(--ink-3);
+}
+
+// With more players the cards drop their captions, so the log keeps some room.
+.scoreboard.crowded {
+  gap: 6px;
+  .score-card {
+    padding: 7px 10px;
+  }
+  .player-hex {
+    width: 26px;
+    height: 26px;
+  }
+  .vp strong {
+    font-size: 1.35rem;
+  }
+  .turn-tag,
+  .secret,
+  .stat small {
+    display: none;
+  }
+  .vp-track {
+    margin: 5px 0;
+    span {
+      height: 4px;
+    }
   }
 }
 
@@ -137,6 +202,6 @@
     gap: 3px;
   }
   .revealed-dev {
-    color: #b9a3ea;
+    color: #c6b4f0;
   }
 }

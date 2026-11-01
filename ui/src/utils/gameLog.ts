@@ -139,5 +139,5 @@ export function buildLog(
       current.entries.push({ index, color, ...describe(gs, record, name) });
     }
   }
-  return turns.reverse();
+  return turns;
 }

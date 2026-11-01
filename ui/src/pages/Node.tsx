@@ -8,31 +8,28 @@ type BuildingProps<T = Color | null> = {
   building: T extends Color ? Building : null;
 };
 
-const FILL: Record<string, string> = {
-  RED: "#fe0400",
-  BLUE: "#2278ff",
-  ORANGE: "#ffa500",
-  WHITE: "#f2f2f2",
-};
-
 function Building({ building, color }: BuildingProps) {
-  const fill = color ? (FILL[color] ?? "#999") : "#999";
+  const className = cn(color?.toLowerCase(), "piece-colors", building === "CITY" ? "city" : "settlement");
   if (building === "CITY") {
-    // city: slightly taller block with shallow roof, no outline
     return (
-      <svg viewBox="0 0 24 18" className={cn(color, "city")} aria-hidden style={{ filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.38))" }}>
-        <rect x="4" y="8" width="16" height="9" fill={fill} />
-        <path d="M12 1.5 L2 8 L22 8 Z" fill={fill} />
-        <rect x="6" y="3.2" width="2.8" height="3" fill={fill} />
-        <rect x="15.2" y="3.2" width="2.8" height="3" fill={fill} />
+      <svg viewBox="0 0 36 34" className={className} aria-hidden>
+        <path className="piece-outline" d="M3 31V12L8 2l5 10v7l7-8h8l6 8v12Z" />
+        <path className="piece-side" d="M27 19h7v12h-7Z" />
+        <path className="piece-face" d="M13 19l7-8 7 8v12H13Z" />
+        <path className="piece-roof" d="M20 11h8l6 8h-7Z" />
+        <path className="piece-face" d="M3 12h10v19H3Z" />
+        <path className="piece-side" d="M9.5 12H13v19H9.5Z" />
+        <path className="piece-roof" d="M3 12 8 2v10Z" />
+        <path className="piece-side" d="M8 2l5 10H8Z" />
       </svg>
     );
   }
-  // settlement: small square + triangle on top, no outline — deliberately compact
   return (
-    <svg viewBox="0 0 24 24" className={cn(color, "settlement")} aria-hidden style={{ filter: "drop-shadow(0 1.6px 2px rgba(0,0,0,0.35))", overflow: "visible" }}>
-      <rect x="7" y="14" width="10" height="8" fill={fill} />
-      <path d="M12 4 L5 14 L19 14 Z" fill={fill} />
+    <svg viewBox="0 0 28 28" className={className} aria-hidden>
+      <path className="piece-outline" d="M3.5 25V14L9.5 6.5h9L24.5 14v11Z" />
+      <path className="piece-side" d="M15.5 14h9v11h-9Z" />
+      <path className="piece-face" d="M3.5 14 9.5 6.5 15.5 14v11h-12Z" />
+      <path className="piece-roof" d="M9.5 6.5h9l6 7.5H15.5Z" />
     </svg>
   );
 }
@@ -73,8 +70,8 @@ export default function Node({
     <div
       className={cn("node", { clickable: flashing, recent })}
       style={{
-        width: size * (isCity ? 0.48 : 0.36),
-        height: size * (isCity ? 0.48 : 0.36),
+        width: size * (isCity ? 0.74 : color ? 0.54 : 0.34),
+        height: size * (isCity ? 0.74 : color ? 0.54 : 0.34),
         left: x,
         top: y,
         transform: `translateY(-50%) translateX(-50%)`,

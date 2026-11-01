@@ -1,34 +1,3 @@
-@use "../variables.scss";
-
-.RED {
-  background: variables.$red;
-}
-.BLUE {
-  background: variables.$blue;
-}
-.ORANGE {
-  background: variables.$orange;
-}
-.WHITE {
-  background: variables.$white;
-}
-.RED.foreground {
-  color: variables.$red;
-  background: #00000000;
-}
-.BLUE.foreground {
-  color: variables.$blue;
-  background: #00000000;
-}
-.ORANGE.foreground {
-  color: variables.$orange;
-  background: #00000000;
-}
-.WHITE.foreground {
-  color: white;
-  background: #00000000;
-}
-
 .robber {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -172,6 +141,7 @@
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.40),
     inset 0 -0.8px 0 rgba(0,0,0,0.18);
+  background-color: var(--piece);
   background-image: linear-gradient(
     to bottom,
     rgba(255,255,255,0.22) 0%,
@@ -179,10 +149,6 @@
     rgba(0,0,0,0.12) 100%
   );
   transition: transform 140ms ease, filter 140ms ease;
-  &.RED { background-color: variables.$red; }
-  &.BLUE { background-color: variables.$blue; }
-  &.ORANGE { background-color: variables.$orange; }
-  &.WHITE { background-color: #ececec; }
 }
 .edge:hover .road { filter: drop-shadow(0 0 0.8px rgba(0,0,0,0.62)) brightness(1.08); transform: scaleY(1.06); }
 
@@ -206,11 +172,6 @@
     overflow: visible;
     display: block;
   }
-  svg.city {
-    flex: none;
-    width: 118%;
-    height: 118%;
-  }
   &.clickable {
     cursor: pointer;
     z-index: 7;
@@ -228,9 +189,29 @@
 }
 .settlement,
 .city {
-  transition: transform 140ms ease, filter 140ms ease;
-  // no gloss, no extra border/background - fill is via SVG
-  &:hover { transform: scale(1.07); }
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
+}
+
+// Each player's piece shades, shared by houses, cities and roads.
+.piece-colors {
+  &.red { --piece: #fe0400; --piece-light: #ff6158; --piece-dark: #ad0300; }
+  &.blue { --piece: #2278ff; --piece-light: #6ea7ff; --piece-dark: #1450b3; }
+  &.orange { --piece: #ffa500; --piece-light: #ffc95c; --piece-dark: #b87700; }
+  &.white { --piece: #ececec; --piece-light: #ffffff; --piece-dark: #b3b3b3; }
+}
+.piece-outline {
+  fill: #1a232c;
+  stroke: #1a232c;
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+}
+.piece-face { fill: var(--piece); }
+.piece-side { fill: var(--piece-dark); }
+.piece-roof { fill: var(--piece-light); }
+
+.robber-art {
+  display: block;
+  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.65));
 }
 
 @keyframes recent-ping {

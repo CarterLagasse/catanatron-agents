@@ -1,0 +1,59 @@
+.bank-tray {
+  margin: 0 12px 8px;
+  padding: 8px 12px 9px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+
+  h4 {
+    margin: 0 0 5px;
+    font: 600 0.98rem var(--font-display);
+  }
+  ul {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-width: 25px;
+    cursor: default;
+
+    b {
+      font: 600 0.92rem/1 var(--font-display);
+      color: var(--ink);
+    }
+    &.low b {
+      color: #ffb45c;
+    }
+    &.out {
+      b {
+        color: #ff8a7a;
+      }
+      svg,
+      .dev-deck {
+        opacity: 0.35;
+        filter: grayscale(0.8);
+      }
+    }
+  }
+  .bank-dev {
+    padding-left: 9px;
+    border-left: 1px solid var(--line);
+    min-width: 34px;
+  }
+  .dev-deck {
+    display: block;
+    width: 17px;
+    height: 23px;
+    border-radius: 3px;
+    background: linear-gradient(160deg, #8d6bd8, #5a3ea8);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 2px 1px 0 #3f2a7d;
+  }
+}

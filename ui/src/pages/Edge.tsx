@@ -4,7 +4,7 @@ import type { Color, Direction } from "../utils/api.types";
 import { tilePixelVector, getEdgeTransform, type CubeCoordinate } from "../utils/coordinates";
 
 function Road({ color }: { color: Color}) {
-  return <div className={cn("road", color)}></div>;
+  return <div className={cn("road", "piece-colors", color.toLowerCase())}></div>;
 }
 
 export type EdgeId = `${number},${number}`;

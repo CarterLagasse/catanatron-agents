@@ -10,7 +10,7 @@ import "./Tile.scss";
 export const HEX_POINTS = "0,-100 86.6,-50 86.6,50 0,100 -86.6,50 -86.6,-50";
 
 // Tiles are drawn slightly small so the sand shows between them.
-const TILE_SCALE = 0.945;
+const TILE_SCALE = 0.925;
 
 function NumberToken({
   number,
@@ -66,7 +66,7 @@ export default function Tile({ center, coordinate, tile, size, onClick, rolled, 
       aria-label={onClick ? "Move the robber here" : undefined}
       onClick={onClick}
     >
-      <polygon points={HEX_POINTS} transform="translate(0 5)" fill={edge} stroke={edge} className="tile-body" />
+      <polygon points={HEX_POINTS} transform="translate(0 3.5)" fill={edge} stroke={edge} className="tile-body" />
       <polygon points={HEX_POINTS} fill={fill} stroke={fill} className="tile-body tile-face" />
       <g clipPath="url(#hex-clip)">
         <TerrainArt terrain={terrain} flip={tile.id % 2 === 1} />

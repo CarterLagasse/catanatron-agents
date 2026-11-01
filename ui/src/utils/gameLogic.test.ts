@@ -182,7 +182,7 @@ describe("gameStatus", () => {
 });
 
 describe("buildLog", () => {
-  test("groups moves into turns, newest first, and shows dice and gains", () => {
+  test("groups moves into turns, oldest first, and shows dice and gains", () => {
     const gs = gameState({
       action_records: [
         [["RED", "ROLL", null], [3, 5]],
@@ -192,11 +192,11 @@ describe("buildLog", () => {
       ] as any,
     });
     const turns = buildLog(gs, name, { 0: { RED: { ORE: 2 } } });
-    expect(turns.map((turn) => turn.label)).toEqual(["Turn 2", "Turn 1"]);
-    expect(turns[1].entries[0].text).toBe("You rolled 8");
-    expect(turns[1].entries[0].gains).toEqual([{ color: "RED", resources: ["ORE", "ORE"] }]);
-    expect(turns[1].entries[1].text).toBe("You built a road");
-    expect(turns[1].entries).toHaveLength(2);
+    expect(turns.map((turn) => turn.label)).toEqual(["Turn 1", "Turn 2"]);
+    expect(turns[0].entries[0].text).toBe("You rolled 8");
+    expect(turns[0].entries[0].gains).toEqual([{ color: "RED", resources: ["ORE", "ORE"] }]);
+    expect(turns[0].entries[1].text).toBe("You built a road");
+    expect(turns[0].entries).toHaveLength(2);
   });
 
   test("doesn't reveal which development card a bot drew", () => {

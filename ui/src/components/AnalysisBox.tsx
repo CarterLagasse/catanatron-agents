@@ -7,6 +7,7 @@ import { store } from "../store";
 import type { Color } from "../utils/api.types";
 import { type MCTSProbabilities, type StateIndex, getMctsAnalysis } from "../utils/apiClient";
 import { isHumanTurn, turnsPlayed } from "../utils/gameLogic";
+import { getHumanColor } from "../utils/stateUtils";
 import "./AnalysisBox.scss";
 
 type AnalysisBoxProps = {
@@ -22,6 +23,7 @@ export default function AnalysisBox({ stateIndex, name }: AnalysisBoxProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const latestRequest = useRef(0);
+  const newestAnswer = useRef(0);
 
   const turn = gs ? turnsPlayed(gs) : 0;
   const run = useCallback(async () => {
@@ -31,7 +33,9 @@ export default function AnalysisBox({ stateIndex, name }: AnalysisBoxProps) {
     setError("");
     try {
       const result = await getMctsAnalysis(gameId, stateIndex);
-      if (request !== latestRequest.current) return;
+      // A slower, older answer still beats nothing, unless a newer one already landed.
+      if (request < newestAnswer.current) return;
+      newestAnswer.current = request;
       if (result.success) {
         setOdds({ probabilities: result.probabilities, turn });
       } else {
@@ -96,13 +100,15 @@ export default function AnalysisBox({ stateIndex, name }: AnalysisBoxProps) {
           })}
         </ul>
       ) : (
-        !error && <p className="odds-note">Appears when your first turn starts.</p>
-      )}
-      {shown && !final && (
-        <p className="odds-note">
-          Rough guess from 100 random games from here. It doesn't know how well each player plays
-          {gs.colors.length > 2 ? ", and splits the rest evenly between the other players" : ""}.
-        </p>
+        !error && (
+          <p className="odds-note">
+            {loading
+              ? "Playing out 100 random games from here."
+              : stateIndex === "latest" && getHumanColor(gs)
+                ? "Updates at the start of each of your turns."
+                : "Press Update for the odds at this move."}
+          </p>
+        )
       )}
     </section>
   );
