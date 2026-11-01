@@ -1,0 +1,370 @@
+.action-dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+
+  &.spectating {
+    justify-content: center;
+    color: var(--ink-2);
+    font-weight: 700;
+    padding: 18px;
+  }
+}
+
+.dock-hand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hand {
+  display: flex;
+  gap: 6px;
+}
+
+.card {
+  position: relative;
+  width: 54px;
+  height: 72px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 7px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #fff9ea, #f1e4c4);
+  border-bottom: 5px solid var(--card-accent, #caa);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  transition: transform 120ms ease, opacity 120ms ease;
+
+  &.wood { --card-accent: #2f7d42; }
+  &.brick { --card-accent: #c8602f; }
+  &.sheep { --card-accent: #92c044; }
+  &.wheat { --card-accent: #ecb62e; }
+  &.ore { --card-accent: #7d8993; }
+
+  svg {
+    width: 34px;
+    height: 34px;
+  }
+  b {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 2px;
+    text-align: center;
+    font: 600 1.05rem var(--font-display);
+    color: #26323c;
+  }
+  &.empty {
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    svg {
+      opacity: 0.35;
+      filter: grayscale(0.7);
+    }
+    b {
+      color: var(--ink-3);
+    }
+  }
+  &:not(.empty):hover {
+    transform: translateY(-3px);
+  }
+}
+
+.dev-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.dev-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(185, 163, 234, 0.4);
+  background: rgba(106, 76, 190, 0.22);
+  color: #d9ccf6;
+  font: 800 0.76rem var(--font-body);
+  b {
+    color: #fff;
+  }
+  &.playable {
+    cursor: pointer;
+    background: #6a4cbe;
+    border-color: #a58ce6;
+    color: #fff;
+    &:hover {
+      background: #7c5dd0;
+    }
+  }
+}
+
+.dock-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.build-wrap {
+  display: inline-flex;
+}
+
+.build-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 82px;
+  height: 58px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: 800 0.8rem var(--font-body);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+
+  &:hover:not(:disabled) {
+    background: #27405a;
+    transform: translateY(-1px);
+  }
+  &.active {
+    border-color: var(--gold);
+    background: rgba(242, 182, 50, 0.16);
+    box-shadow: 0 0 0 1px var(--gold);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    color: var(--ink-3);
+    background: rgba(255, 255, 255, 0.025);
+    .build-cost span:not(.short) {
+      opacity: 0.9;
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+}
+
+.build-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  svg {
+    font-size: 1rem;
+  }
+}
+
+.build-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  height: 18px;
+
+  span {
+    display: inline-flex;
+  }
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+  // A card still needed, so a full cost strip reads as affordable at a glance.
+  .short {
+    opacity: 0.3;
+    filter: grayscale(0.85);
+  }
+  &.muted {
+    color: var(--ink-3);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+}
+
+.primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 132px;
+  height: 58px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--gold);
+  color: var(--gold-ink);
+  font: 600 1.05rem var(--font-display);
+  cursor: pointer;
+  box-shadow: 0 3px 0 #a87a14;
+  transition: transform 100ms ease, background 120ms ease;
+
+  &:hover:not(:disabled) {
+    background: #ffc544;
+    transform: translateY(-1px);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #a87a14;
+  }
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+  // Nothing to press: say so plainly and don't look like the main button.
+  &.idle,
+  &:disabled {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ink-2);
+    box-shadow: none;
+    cursor: default;
+  }
+  kbd {
+    font: 800 0.68rem var(--font-body);
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.16);
+  }
+}
+
+.trade-panel.MuiPaper-root {
+  padding: 14px 16px;
+  width: 322px;
+  max-width: calc(100vw - 16px);
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+
+  h3 {
+    margin: 0 0 6px;
+    font: 600 1.05rem var(--font-display);
+  }
+  p {
+    margin: 10px 0 5px;
+    color: var(--ink-2);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+  small {
+    display: block;
+    margin-top: 10px;
+    color: var(--ink-3);
+    font-size: 0.75rem;
+  }
+}
+
+.trade-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.trade-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: 5px 2px;
+  border-radius: 9px;
+  border: 2px solid transparent;
+  background: #f3e8ca;
+  color: #23303b;
+  font: 800 0.74rem var(--font-body);
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    border-color: var(--gold);
+  }
+  &.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(242, 182, 50, 0.4);
+  }
+  &:disabled {
+    opacity: 0.32;
+    filter: saturate(0.3);
+    cursor: not-allowed;
+  }
+}
+
+@media (max-width: 1180px) {
+  .build-button {
+    min-width: 72px;
+  }
+  .primary-action {
+    min-width: 112px;
+  }
+}
+
+@media (max-width: 720px) {
+  .action-dock {
+    padding: 8px;
+    gap: 8px;
+  }
+  .dock-hand {
+    width: 100%;
+  }
+  .hand {
+    justify-content: space-between;
+  }
+  .card {
+    flex: 1;
+    width: auto;
+    height: 56px;
+    padding-top: 5px;
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+  .dock-actions {
+    width: 100%;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+  .build-wrap,
+  .build-button {
+    width: 100%;
+    min-width: 0;
+  }
+  .build-button {
+    height: 50px;
+    padding: 3px 1px;
+  }
+  .build-title {
+    font-size: 0.66rem;
+    gap: 2px;
+    svg {
+      display: none;
+    }
+  }
+  .build-cost {
+    padding: 0 1px;
+    gap: 0;
+    svg {
+      width: 10px;
+      height: 10px;
+    }
+  }
+  .primary-action {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 46px;
+  }
+}

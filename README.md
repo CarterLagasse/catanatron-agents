@@ -134,6 +134,9 @@ Watch, inspect, and play games against Catanatron via the web UI.
 
 3. Visit http://localhost:4000 in your browser!
 
+The new UI opens by default. To use the previous one, pick **Classic** at the top
+of the home page or go to http://localhost:4001. Its code is in `ui-backup/`.
+
 ## Python Library
 
 You can also use `catanatron` package directly which provides a core

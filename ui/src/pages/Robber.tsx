@@ -1,9 +1,4 @@
-import {
-  SQRT3,
-  tilePixelVector,
-  type CubeCoordinate,
-} from "../utils/coordinates";
-import { Paper } from "@mui/material";
+import { tilePixelVector, type CubeCoordinate } from "../utils/coordinates";
 
 type RobberProps = {
   center: [number, number];

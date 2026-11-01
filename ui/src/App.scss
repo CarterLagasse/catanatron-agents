@@ -1,7 +1,25 @@
-* {
-  box-sizing: border-box;
+:root {
+  --font-display: "Fredoka", "Nunito", "Segoe UI", sans-serif;
+  --font-body: "Nunito", "Segoe UI", sans-serif;
+
+  --bg: #0e1a24;
+  --panel: #152431;
+  --panel-2: #1c2f3f;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --ink: #f4f1e8;
+  --ink-2: #b4c0c9;
+  --ink-3: #8795a0;
+  --gold: #f2b632;
+  --gold-ink: #241a00;
+  --chart-bar: #c08511;
+
+  --red: #fe0400;
+  --blue: #2278ff;
+  --orange: #ffa500;
+  --white-piece: #f2f2f2;
 }
 
-.logo {
-  font-family: "Bungee Inline", sans-serif;
+* {
+  box-sizing: border-box;
 }

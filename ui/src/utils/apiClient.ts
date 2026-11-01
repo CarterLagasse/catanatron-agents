@@ -1,15 +1,15 @@
 import axios from "axios";
 
 import { API_URL } from "../configuration";
-import type { Color, GameAction, GameState } from "./api.types";
+import type { Color, GameAction, GameState, MapTemplate } from "./api.types";
 
+export type { MapTemplate };
 export type PlayerArchetype =
   | "HUMAN"
   | "RANDOM"
   | "CATANATRON"
   | "WEIGHTED_RANDOM"
-  | string; // allows PPO:ppo_agents/... dynamic agents
-export type MapTemplate = "BASE" | "MINI" | "TOURNAMENT";
+  | string; // allows PPO:ppo_agents/... and JAX:... dynamic agents
 export type StateIndex = number | `${number}` | "latest";
 
 type CreateGameOptions = {
@@ -37,13 +37,22 @@ export async function createGame({
   return response.data.game_id;
 }
 
-export async function getPpoAgents(): Promise<string[]> {
+export type JaxAgent = {
+  key: string;
+  label: string;
+  group?: string;
+  level?: string;
+  win_rate?: number;
+};
+
+/** Returns null if the server can't be reached. */
+export async function getJaxAgents(): Promise<JaxAgent[] | null> {
   try {
-    const response = await axios.get<{ agents: string[] }>(`${API_URL}/api/ppo-agents`);
+    const response = await axios.get<{ agents: JaxAgent[] }>(`${API_URL}/api/jax-agents`);
     return response.data.agents || [];
   } catch (e) {
-    console.warn("Failed to fetch ppo agents", e);
-    return [];
+    console.warn("Failed to fetch jax agents", e);
+    return null;
   }
 }
 

@@ -6,7 +6,7 @@ import json
 from enum import Enum
 
 from catanatron.game import Game
-from catanatron.models.enums import Action, ActionType
+from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.map import LandTile, Port, Water
 from catanatron.models.player import Color
 from catanatron.state import State
@@ -104,6 +104,10 @@ class GameEncoder(json.JSONEncoder):
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
                 "winning_color": obj.winning_color(),
                 "state_index": get_state_index(obj.state),
+                "vps_to_win": obj.vps_to_win,
+                "discard_limit": obj.state.discard_limit,
+                "bank": dict(zip(RESOURCES, obj.state.resource_freqdeck)),
+                "dev_cards_left": len(obj.state.development_listdeck),
             }
         if isinstance(obj, Water):
             return {"type": "WATER"}

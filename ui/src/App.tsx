@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { blue, green } from "@mui/material/colors";
 import Fade from "@mui/material/Fade";
 
 import GameScreen from "./pages/GameScreen";
@@ -13,13 +12,16 @@ import ReplayScreen from "./pages/ReplayScreen";
 
 const theme = createTheme({
   palette: {
-    primary: {
-      main: blue[900],
-    },
-    secondary: {
-      main: green[900],
-    },
+    mode: "dark",
+    primary: { main: "#f2b632", contrastText: "#241a00" },
+    secondary: { main: "#6a4cbe" },
+    background: { default: "#0e1a24", paper: "#1c2f3f" },
   },
+  typography: {
+    fontFamily: '"Nunito", "Segoe UI", sans-serif',
+    button: { fontWeight: 800, textTransform: "none" },
+  },
+  shape: { borderRadius: 10 },
 });
 
 function App() {
@@ -27,9 +29,8 @@ function App() {
     <ThemeProvider theme={theme}>
       <StateProvider>
         <SnackbarProvider
-          classes={{ containerRoot: "snackbar-container" }}
-          maxSnack={1}
-          autoHideDuration={1000}
+          maxSnack={2}
+          autoHideDuration={4000}
           TransitionComponent={Fade}
           TransitionProps={{ timeout: 100 }}
         >

@@ -10,6 +10,10 @@ In the project directory, you can run:
 Runs the app in the development mode.<br />
 Open [http://localhost:4000](http://localhost:4000) to view it in the browser.
 
+This also serves the classic UI from `../ui-backup` on [http://localhost:4001](http://localhost:4001),
+which the New/Classic switch on the home page links to. Run `npm ci` in `ui-backup` once to enable it.
+In production builds the switch is hidden unless `CTRON_CLASSIC_UI_URL` is set.
+
 The page will reload if you make edits.<br />
 You will also see any lint errors in the console.
 

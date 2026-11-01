@@ -1,368 +1,405 @@
-@use "sass:color";
-@use "../variables.scss";
-
 .home-page {
   height: 100%;
-  min-height: 100%;
-  min-height: 100dvh;
   overflow-y: auto;
-  overflow-x: hidden;
-  padding: 24px 16px 0;
+  color: var(--ink);
   background:
-    radial-gradient(circle at top, rgb(34 120 255 / 18%), transparent 35%),
-    linear-gradient(180deg, #070a0c 0%, #111614 100%);
+    radial-gradient(ellipse 90% 60% at 50% -10%, #235a86 0%, transparent 70%),
+    var(--bg);
 }
 
-.home-page__inner {
-  width: min(100%, 680px);
+.home-inner {
+  max-width: 860px;
   margin: 0 auto;
+  padding: 34px 20px 60px;
+
+  h2 {
+    margin: 26px 0 12px;
+    font: 600 1.3rem var(--font-display);
+  }
 }
 
-.home-page .logo {
-  margin: 12px 0 24px;
-  color: white;
-  font-size: clamp(1.9rem, 5vw, 2.4rem);
-  text-align: center;
+.ui-switch {
+  display: flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  font-size: 0.85rem;
+
+  > * {
+    padding: 5px 13px;
+    border-radius: 999px;
+  }
+
+  [aria-current] {
+    color: var(--gold-ink);
+    background: var(--gold);
+  }
+
+  a {
+    color: var(--ink);
+    text-decoration: none;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+  }
 }
 
-.home-page .setup-card {
-  width: 100%;
-  padding: 18px 20px 28px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 24px;
-  background: rgb(21 19 19 / 92%);
-  box-shadow: 0 20px 60px rgb(0 0 0 / 28%);
+.home-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  h1 {
+    margin: 0;
+    font: 600 2.6rem/1 var(--font-display);
+  }
+  p {
+    margin: 6px 0 0;
+    color: var(--ink-2);
+    font-size: 1.02rem;
+  }
 }
 
-.home-page .setup-note {
-  margin: 0 0 14px;
-  color: rgb(255 255 255 / 72%);
-  font-size: 0.73rem;
-  letter-spacing: 0.08em;
-  text-align: center;
-  text-transform: uppercase;
+.home-mark {
+  flex: none;
+  width: 58px;
+  height: 66px;
+  background: linear-gradient(160deg, #f2b632 0 45%, #e26427 45% 72%, #1e5d29 72%);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
 }
 
-.home-page .control-group {
-  margin-bottom: 16px;
+.home-alert.MuiAlert-root {
+  margin-top: 14px;
 }
 
-.home-page .control-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.home-page .compact-control {
-  margin-bottom: 0;
-}
-
-.home-page .control-header {
+.continue-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-  color: white;
-}
+  gap: 14px;
+  margin-top: 20px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(242, 182, 50, 0.6);
+  background: rgba(242, 182, 50, 0.1);
+  color: var(--ink);
+  text-decoration: none;
 
-.home-page .control-header strong {
-  font-size: 0.9rem;
-  letter-spacing: 0.04em;
-  line-height: 1;
-}
-
-.home-page .hero-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 10px 12px;
-  margin-bottom: 14px;
-  background: linear-gradient(135deg, rgba(34,120,255,0.12), rgba(255,255,255,0.04));
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 14px;
-}
-
-.hero-thumb,
-.map-thumb {
-  display: flex;
-  gap: 3px;
-  align-items: center;
-  justify-content: center;
-  &.small { transform: scale(0.85); }
-}
-
-.mini-hex {
-  width: 18px;
-  height: 20px;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  border: 1px solid rgba(0,0,0,0.25);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
-  &.wood { background: #2e7d32; }
-  &.brick { background: #b71c1c; }
-  &.wheat { background: #fdd835; }
-  &.sheep { background: #a5d6a7; }
-  &.ore { background: #607d8b; }
-}
-
-.hero-thumb .mini-hex { width: 20px; height: 22px; }
-
-.home-page .map-template-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  .choice-button {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 6px 8px;
-    min-height: 78px;
-    align-items: center;
-    .map-label { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; }
-    .map-desc { font-size: 0.62rem; opacity: 0.65; text-transform: none; letter-spacing: 0; }
+  &:hover {
+    background: rgba(242, 182, 50, 0.17);
+  }
+  strong {
+    display: block;
+    font-weight: 800;
+  }
+  small {
+    color: var(--ink-2);
+  }
+  em {
+    flex: none;
+    font: normal 600 1rem var(--font-display);
+    color: var(--gold);
   }
 }
 
-.home-page .players-alert {
-  margin-bottom: 10px;
-}
-
-.home-page .players-list {
+.opponent-groups {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 14px;
 }
 
-.home-page .player-row {
+.opponent-group h3 {
+  margin: 0 0 7px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.opponent-grid {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
 }
 
-.home-page .player-meta {
+.opponent-card {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+
+  &:hover {
+    background: var(--panel-2);
+    transform: translateY(-1px);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+  &.selected {
+    border-color: var(--gold);
+    background: rgba(242, 182, 50, 0.11);
+    box-shadow: 0 0 0 1px var(--gold);
+  }
+  strong {
+    font: 600 1.08rem var(--font-display);
+  }
+  small {
+    color: var(--ink-2);
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+}
+
+.opponent-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dots {
+  display: inline-flex;
   gap: 3px;
+  flex: none;
+  i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    &.on {
+      background: var(--gold);
+    }
+  }
 }
 
-.home-page .player-label {
-  color: white;
-  font-size: 0.9rem;
+.your-record {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--gold);
 }
 
-.home-page .player-color-chip {
-  display: inline-flex;
-  width: fit-content;
-  padding: 2px 7px;
-  border-radius: 999px;
-  color: rgb(255 255 255 / 92%);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  background: rgb(255 255 255 / 10%);
+.advanced {
+  margin-top: 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+
+  summary {
+    padding: 12px 16px;
+    font-weight: 800;
+    font-size: 0.92rem;
+    color: var(--ink-2);
+    cursor: pointer;
+    &:hover {
+      color: var(--ink);
+    }
+  }
 }
 
-.home-page .player-color-chip.red {
-  background: rgb(254 4 0 / 22%);
-  color: #ff8a86;
-}
-
-.home-page .player-color-chip.blue {
-  background: rgb(34 120 255 / 22%);
-  color: #8cb7ff;
-}
-
-.home-page .player-color-chip.orange {
-  background: rgb(255 165 0 / 24%);
-  color: #ffd18a;
-}
-
-.home-page .player-color-chip.white {
-  background: rgb(255 255 255 / 16%);
-  color: rgb(255 255 255 / 88%);
-}
-
-.home-page .switch-control {
+.advanced-body {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  padding: 2px 16px 16px;
 }
 
-.home-page .inline-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.home-page .MuiButton-root.choice-button,
-.home-page .MuiButton-root.add-player-btn {
-  color: white;
-  background-color: variables.$dark-gray;
-}
-
-.home-page .MuiButton-root.choice-button:hover,
-.home-page .MuiButton-root.add-player-btn:hover {
-  background-color: color.adjust(variables.$dark-gray, $lightness: -8%);
-}
-
-.home-page .MuiButton-root.choice-button.selected {
-  background-color: #0d47a1;
-}
-
-.home-page .MuiButton-root.choice-button.selected:hover {
-  background-color: color.adjust(#0d47a1, $lightness: -2%);
-}
-
-.home-page .MuiButton-root.remove-player-btn {
-  min-width: 80px;
-  color: rgb(255 255 255 / 75%);
-}
-
-.home-page .MuiButton-root.remove-player-btn.Mui-disabled {
-  color: rgb(255 255 255 / 30%);
-}
-
-.home-page .add-player-btn,
-.home-page .start-btn {
-  width: 100%;
-}
-
-.home-page .start-btn {
-  height: 40px;
-  color: white;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  background: linear-gradient(135deg, #2f87ff 0%, #0d47a1 100%);
-  box-shadow: 0 12px 28px rgb(13 71 161 / 32%);
-}
-
-.home-page .start-btn:hover {
-  background: linear-gradient(135deg, #4b98ff 0%, #1565c0 100%);
-  box-shadow: 0 14px 30px rgb(21 101 192 / 36%);
-}
-
-.home-page .MuiInputBase-root {
-  width: 100%;
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
-  color: white;
-  background: rgb(255 255 255 / 4%);
 }
 
-.home-page .MuiInputBase-root.MuiOutlinedInput-root,
-.home-page .MuiInputBase-root.MuiOutlinedInput-root .MuiSelect-select,
-.home-page .MuiInputBase-root.MuiOutlinedInput-root .MuiSelect-select span,
-.home-page .MuiInputBase-root.MuiOutlinedInput-root input {
-  color: white;
-}
-
-.home-page .MuiInputBase-root.MuiOutlinedInput-root .MuiSvgIcon-root,
-.home-page .MuiSelect-icon {
-  color: rgb(255 255 255 / 72%);
-}
-
-.home-page .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
-  border-color: rgb(255 255 255 / 14%);
-}
-
-.home-page .MuiSvgIcon-root,
-.home-page .MuiSlider-root {
-  color: variables.$blue;
-}
-
-.home-page .MuiIconButton-root.help-button {
-  margin: 0;
-  padding: 0;
-  color: rgb(255 255 255 / 52%);
-  font-size: 0.95rem;
-}
-
-.home-page .MuiIconButton-root.help-button:hover {
-  color: rgb(255 255 255 / 82%);
-  background: transparent;
-}
-
-.home-page .MuiCheckbox-root.inline-switch {
-  margin-left: -9px;
-  padding: 0;
-}
-
-.home-page .MuiSlider-mark {
-  background-color: rgb(255 255 255 / 20%);
-}
-
-.home-page .loader {
-  display: block;
-  margin: 40px auto 0;
-}
-
-.home-page .page-end-spacer {
-  height: max(32px, calc(env(safe-area-inset-bottom) + 24px));
-}
-
-@media (max-width: variables.$sm-breakpoint) {
-  .home-page {
-    padding: 24px 16px 0;
+.setting-label {
+  font-size: 0.88rem;
+  font-weight: 800;
+  b {
+    margin-left: 4px;
+    color: var(--gold);
   }
+}
 
-  .home-page .logo {
-    margin: 16px 0 20px;
-    font-size: clamp(1.75rem, 8vw, 2.2rem);
+.setting-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 22px;
+  align-items: center;
+}
+
+.robber-setting {
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  svg {
+    margin-left: 4px;
+    color: var(--ink-3);
   }
+}
 
-  .home-page .setup-card {
-    padding: 16px 16px 24px;
-    border-radius: 18px;
+.map-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.map-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  text-align: left;
+  border-radius: 10px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-body);
+  cursor: pointer;
+  &:hover {
+    background: var(--panel-2);
   }
+  &.selected {
+    border-color: var(--gold);
+    background: rgba(242, 182, 50, 0.11);
+  }
+  strong {
+    font-weight: 800;
+    font-size: 0.92rem;
+  }
+  small {
+    color: var(--ink-2);
+    font-size: 0.75rem;
+  }
+}
 
-  .home-page .map-template-buttons,
-  .home-page .control-row {
+.seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seat-color {
+  flex: none;
+  width: 66px;
+  padding: 3px 0;
+  text-align: center;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  &.red { background: var(--red); }
+  &.blue { background: var(--blue); }
+  &.orange { background: var(--orange); color: #241a00; }
+  &.white { background: var(--white-piece); color: #23303b; }
+}
+
+.add-seat.MuiButton-root {
+  align-self: flex-start;
+  margin-top: 3px;
+}
+
+.seat-hint {
+  color: var(--ink-3);
+  font-size: 0.78rem;
+}
+
+.play-bar {
+  position: sticky;
+  bottom: 0;
+  margin-top: 18px;
+  padding: 10px 0;
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+.play-button.MuiButton-root {
+  width: 100%;
+  min-height: 56px;
+  border-radius: 12px;
+  font: 600 1.25rem var(--font-display);
+  text-transform: none;
+  box-shadow: 0 3px 0 #a87a14;
+  &.Mui-disabled {
+    box-shadow: none;
+  }
+}
+
+.recent-games {
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 2px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.92rem;
+  }
+  .result {
+    flex: none;
+    width: 62px;
+    font-weight: 800;
+    color: var(--ink-2);
+    &.won {
+      color: #7fd98c;
+    }
+    &.lost {
+      color: #ff9a8c;
+    }
+  }
+  .recent-name {
+    font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  small {
+    margin-left: auto;
+    flex: none;
+    color: var(--ink-3);
+  }
+  a {
+    flex: none;
+    color: var(--gold);
+    font-weight: 800;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-inner {
+    padding: 22px 14px 40px;
+  }
+  .home-hero h1 {
+    font-size: 2rem;
+  }
+  .home-mark {
+    width: 44px;
+    height: 50px;
+  }
+  .opponent-grid {
     grid-template-columns: 1fr;
   }
-
-  .home-page .control-row {
-    gap: 0;
-  }
-
-  .home-page .map-template-buttons {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .home-page .compact-control {
-    margin-bottom: 16px;
-  }
-}
-
-@media (max-width: 420px) {
-  .home-page {
-    padding: 20px 14px 0;
-  }
-
-  .home-page .setup-card {
-    padding: 14px 14px 22px;
-  }
-
-  .home-page .control-header {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .home-page .player-row {
-    grid-template-columns: 88px minmax(0, 1fr) auto;
-    gap: 8px;
-    padding: 0;
-    border-top: 0;
-    align-items: center;
-  }
-
-  .home-page .MuiButton-root.remove-player-btn {
-    width: auto;
-    min-width: 80px;
-  }
-
-  .home-page .inline-title {
-    align-items: flex-start;
-    line-height: 1.2;
+  .setting-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }

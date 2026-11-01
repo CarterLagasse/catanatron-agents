@@ -1,0 +1,345 @@
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  IconButton,
+  MenuItem,
+  Select,
+  Slider,
+  Tooltip,
+} from "@mui/material";
+import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
+import { GridLoader } from "react-spinners";
+import {
+  createGame,
+  getJaxAgents,
+  type JaxAgent,
+  type MapTemplate,
+  type PlayerArchetype,
+} from "../utils/apiClient";
+
+import { NEW_UI_URL } from "../configuration";
+import "./HomePage.scss";
+
+const BASE_PLAYER_ARCHETYPES: Array<{
+  value: PlayerArchetype;
+  label: string;
+}> = [
+  { value: "HUMAN", label: "Human" },
+  { value: "RANDOM", label: "Random" },
+  { value: "CATANATRON", label: "Catanatron" },
+  { value: "WEIGHTED_RANDOM", label: "Weighted Random" },
+];
+
+const MAP_TEMPLATES: MapTemplate[] = ["BASE", "MINI", "TOURNAMENT"];
+const PLAYER_COLORS = ["RED", "BLUE", "ORANGE", "WHITE"] as const;
+
+const MAP_META: Record<MapTemplate, { desc: string }> = {
+  BASE: { desc: "Classic 19 hexes" },
+  MINI: { desc: "Compact 7 hexes" },
+  TOURNAMENT: { desc: "Balanced pros" },
+};
+
+export default function HomePage() {
+  const [loading, setLoading] = useState(false);
+  const [mapTemplate, setMapTemplate] = useState<MapTemplate>("BASE");
+  const [vpsToWin, setVpsToWin] = useState(15);
+  const [discardLimit, setDiscardLimit] = useState(9);
+  const [friendlyRobber, setFriendlyRobber] = useState(true);
+  const [players, setPlayers] = useState<PlayerArchetype[]>([
+    "HUMAN",
+    "CATANATRON",
+  ]);
+  const [jaxAgents, setJaxAgents] = useState<JaxAgent[]>([]);
+  const navigate = useNavigate();
+  const humanCount = players.filter((player) => player === "HUMAN").length;
+  const hasTooManyHumans = humanCount > 1;
+  const hasJaxAgent = players.some((player) => player.startsWith("JAX:"));
+  const jaxSetupInvalid =
+    hasJaxAgent && (players.length !== 2 || mapTemplate !== "BASE");
+
+  useEffect(() => {
+    getJaxAgents().then(setJaxAgents);
+  }, []);
+
+  const PLAYER_ARCHETYPES = useMemo(() => {
+    const jaxOptions = jaxAgents.map(({ key, label }) => ({
+      value: key,
+      label,
+    }));
+    return [...BASE_PLAYER_ARCHETYPES, ...jaxOptions];
+  }, [jaxAgents]);
+
+  const handlePlayerChange = (index: number, value: PlayerArchetype) => {
+    if (
+      value === "HUMAN" &&
+      players[index] !== "HUMAN" &&
+      humanCount >= 1
+    ) {
+      return;
+    }
+
+    if (value.startsWith("JAX:")) {
+      // The settings these agents trained on, which their measured strength assumes.
+      setMapTemplate("BASE");
+      setVpsToWin(10);
+      setDiscardLimit(7);
+      setFriendlyRobber(false);
+    }
+
+    setPlayers((current) =>
+      current.map((player, playerIndex) =>
+        playerIndex === index ? value : player
+      )
+    );
+  };
+
+  const handleAddPlayer = () => {
+    setPlayers((current) =>
+      current.length >= 4 ? current : [...current, "WEIGHTED_RANDOM"]
+    );
+  };
+
+  const handleRemovePlayer = (index: number) => {
+    setPlayers((current) =>
+      current.length <= 2
+        ? current
+        : current.filter((_, playerIndex) => playerIndex !== index)
+    );
+  };
+
+  const handleCreateGame = async () => {
+    if (hasTooManyHumans || jaxSetupInvalid) {
+      return;
+    }
+
+    setLoading(true);
+    const gameId = await createGame({
+      players,
+      mapTemplate,
+      vpsToWin,
+      discardLimit,
+      friendlyRobber,
+    });
+    setLoading(false);
+    navigate("/games/" + gameId);
+  };
+
+  return (
+    <div className="home-page">
+      <div className="home-page__inner">
+        <h1 className="logo">Catanatron</h1>
+        {NEW_UI_URL && (
+          <nav className="ui-switch" aria-label="Choose interface">
+            <a href={NEW_UI_URL}>New</a>
+            <span aria-current="page">Classic</span>
+          </nav>
+        )}
+          {!loading ? (
+          <div className="setup-card">
+            <div className="hero-row">
+              <span className="hero-thumb" aria-hidden>
+                <span className="mini-hex wood" />
+                <span className="mini-hex brick" />
+                <span className="mini-hex wheat" />
+              </span>
+              <div>
+                <p className="setup-note" style={{ margin: 0, textAlign: "left" }}>Play like Colonist — fast, tactile, vs bots</p>
+                <small style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.72rem" }}>Open hands • Dice animations • Cost strip • Harbor trading</small>
+              </div>
+            </div>
+
+            <div className="control-group">
+              <div className="control-header">
+                <span>Map Template</span>
+                <strong>{mapTemplate}</strong>
+              </div>
+              <div className="map-template-buttons">
+                {MAP_TEMPLATES.map((value) => (
+                  <Button
+                    key={value}
+                    variant="contained"
+                    onClick={() => setMapTemplate(value)}
+                    className={`choice-button map-${value.toLowerCase()} ${
+                      mapTemplate === value ? "selected" : ""
+                    }`}
+                  >
+                    <span className="map-thumb small" aria-hidden>
+                      <span className={`mini-hex ${value === "MINI" ? "sheep" : "wood"}`} />
+                      <span className={`mini-hex ${value === "TOURNAMENT" ? "ore" : "brick"}`} />
+                      <span className={`mini-hex ${value === "BASE" ? "wheat" : "wood"}`} />
+                    </span>
+                    <span className="map-label">{value}</span>
+                    <small className="map-desc">{MAP_META[value].desc}</small>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="control-row">
+              <div className="control-group compact-control">
+                <div className="control-header">
+                  <span>Points to Win</span>
+                  <strong>{vpsToWin}</strong>
+                </div>
+                <Slider
+                  value={vpsToWin}
+                  min={3}
+                  max={20}
+                  step={1}
+                  marks
+                  valueLabelDisplay="auto"
+                  onChange={(_, value) => setVpsToWin(value as number)}
+                />
+              </div>
+
+              <div className="control-group compact-control">
+                <div className="control-header">
+                  <span>Card Discard Limit</span>
+                  <strong>{discardLimit}</strong>
+                </div>
+                <Slider
+                  value={discardLimit}
+                  min={5}
+                  max={20}
+                  step={1}
+                  marks
+                  valueLabelDisplay="auto"
+                  onChange={(_, value) => setDiscardLimit(value as number)}
+                />
+              </div>
+
+              <div className="control-group compact-control switch-control">
+                <div className="control-header">
+                  <span className="inline-title">
+                    Friendly Robber
+                    <Tooltip
+                      title="Prevent robber placement on tiles touching opponents with 2 victory points."
+                      arrow
+                      enterTouchDelay={0}
+                      leaveTouchDelay={3000}
+                    >
+                      <IconButton
+                        size="small"
+                        className="help-button"
+                        aria-label="Friendly Robber help"
+                      >
+                        <HelpOutlineRoundedIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  </span>
+                  <strong>{friendlyRobber ? "On" : "Off"}</strong>
+                </div>
+                <Checkbox
+                  className="inline-switch"
+                  checked={friendlyRobber}
+                  onChange={(event) =>
+                    setFriendlyRobber(event.target.checked)
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="control-group">
+              <div className="control-header">
+                <span>Players</span>
+                <strong>{players.length}/4</strong>
+              </div>
+              {hasTooManyHumans && (
+                <Alert severity="error" className="players-alert">
+                  Only one Human player is allowed.
+                </Alert>
+              )}
+              {jaxSetupInvalid && (
+                <Alert severity="error" className="players-alert">
+                  PSRO and PPO agents only play 2-player games on the BASE map.
+                </Alert>
+              )}
+              {hasJaxAgent && !jaxSetupInvalid && (
+                <Alert severity="info" className="players-alert">
+                  PSRO and PPO agents trained on 10 points, discard limit 7, and
+                  friendly robber off. Other settings work but are untested.
+                </Alert>
+              )}
+              <div className="players-list">
+                {players.map((player, index) => (
+                  <div className="player-row" key={`${player}-${index}`}>
+                    <div className="player-meta">
+                      <span className="player-label">Player {index + 1}</span>
+                      <span
+                        className={`player-color-chip ${PLAYER_COLORS[index].toLowerCase()}`}
+                      >
+                        {PLAYER_COLORS[index]}
+                      </span>
+                    </div>
+                    <Select
+                      size="small"
+                      fullWidth
+                      value={player}
+                      onChange={(event) =>
+                        handlePlayerChange(
+                          index,
+                          event.target.value as PlayerArchetype
+                        )
+                      }
+                    >
+                      {PLAYER_ARCHETYPES.map((option) => (
+                        <MenuItem
+                          key={option.value}
+                          value={option.value}
+                          disabled={
+                            option.value === "HUMAN" &&
+                            humanCount >= 1 &&
+                            player !== "HUMAN"
+                          }
+                        >
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <Button
+                      variant="text"
+                      className="remove-player-btn"
+                      disabled={players.length <= 2}
+                      onClick={() => handleRemovePlayer(index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                variant="contained"
+                className="add-player-btn"
+                disabled={players.length >= 4}
+                onClick={handleAddPlayer}
+              >
+                Add Player
+              </Button>
+            </div>
+
+            <Button
+              variant="contained"
+              color="primary"
+              className="start-btn"
+              disabled={hasTooManyHumans || jaxSetupInvalid}
+              onClick={handleCreateGame}
+            >
+              Start
+            </Button>
+          </div>
+        ) : (
+          <GridLoader
+            className="loader"
+            color="#ffffff"
+            size={60}
+          />
+        )}
+        <div className="page-end-spacer" aria-hidden="true" />
+      </div>
+    </div>
+  );
+}

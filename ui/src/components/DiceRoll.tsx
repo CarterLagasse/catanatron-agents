@@ -1,79 +1,58 @@
-import { useEffect, useState, useContext } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { store } from "../store";
+import { motion } from "framer-motion";
+
+import type { Color, GameState } from "../utils/api.types";
+import { lastRoll } from "../utils/gameLogic";
 import "./DiceRoll.scss";
 
-function diceFaces(value: number | null) {
-  if (value === null || value === undefined) return null;
-  const dots = Array.from({ length: value }, (_, i) => i);
-  return dots;
+// Pip positions on a 3x3 grid, numbered left to right, top to bottom.
+const FACES: Record<number, number[]> = {
+  1: [5],
+  2: [1, 9],
+  3: [1, 5, 9],
+  4: [1, 3, 7, 9],
+  5: [1, 3, 5, 7, 9],
+  6: [1, 3, 4, 6, 7, 9],
+};
+
+export function Die({ value, size = 34 }: { value: number; size?: number }) {
+  return (
+    <span className="die" style={{ width: size, height: size }}>
+      {Array.from({ length: 9 }, (_, i) => (
+        <span key={i} className={FACES[value]?.includes(i + 1) ? "pip" : undefined} />
+      ))}
+    </span>
+  );
 }
 
-export default function DiceRoll() {
-  const { state } = useContext(store);
-  const gs = state.gameState;
-  const [rolling, setRolling] = useState(false);
-  const [dice, setDice] = useState<[number, number] | null>(null);
-  const [visible, setVisible] = useState(false);
-
-  // Detect last roll from action_records
-  useEffect(() => {
-    if (!gs) return;
-    const last = gs.action_records[gs.action_records.length - 1];
-    if (!last || !Array.isArray(last) || last[1] !== "ROLL") return;
-    const sum: number = last[2] as number;
-    // Derive two dice that sum to `sum` (approx, for visual only)
-    // 7 is 3+4 most common colonist split; otherwise random split.
-    let d1 = Math.floor(sum / 2);
-    let d2 = sum - d1;
-    if (d1 < 1) d1 = 1;
-    if (d2 < 1) d2 = 1;
-    if (d1 > 6) { d1 = 6; d2 = sum - 6; }
-    if (d2 > 6) { d2 = 6; d1 = sum - 6; }
-
-    setDice([d1, d2]);
-    setVisible(true);
-    setRolling(true);
-    const t1 = setTimeout(() => setRolling(false), 650);
-    const t2 = setTimeout(() => setVisible(false), 2800);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [gs?.action_records?.length]);
-
-  // Also watch for non-roll to keep hidden
-  if (!gs || !dice || !visible) return null;
-
+/** The latest roll. Stays up so it can be checked at any time, and shakes when it changes. */
+export default function DiceRoll({
+  gameState,
+  name,
+}: {
+  gameState: GameState;
+  name: (color: Color) => string;
+}) {
+  const roll = lastRoll(gameState);
+  if (!roll) return null;
+  const total = roll.dice[0] + roll.dice[1];
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          className="dice-overlay"
-          initial={{ opacity: 0, y: 8, scale: 0.92 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8, scale: 0.92 }}
-          transition={{ duration: 0.22 }}
-        >
-          <div className="dice-row">
-            {[dice[0], dice[1]].map((val, idx) => (
-              <motion.div
-                key={`${val}-${idx}-${rolling ? "r" : "s"}`}
-                className={`die ${rolling ? "rolling" : ""}`}
-                animate={rolling ? { rotate: 360 * (idx === 0 ? 1 : -1), scale: [1, 1.08, 1] } : { rotate: 0 }}
-                transition={rolling ? { duration: 0.6, ease: "easeInOut" } : { duration: 0.2 }}
-              >
-                <div className={`die-face die-${val}`}>
-                  {Array.from({ length: val }).map((_, i) => (
-                    <span key={i} className="pip" />
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-            <motion.div className="dice-sum" initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
-              {dice[0] + dice[1]}
-            </motion.div>
-          </div>
-          <div className="dice-label">{dice[0] + dice[1] === 7 ? "Robber!" : `Rolled ${dice[0] + dice[1]}`}</div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <motion.div
+      key={roll.index}
+      className="dice-tray"
+      role="status"
+      aria-label={`${name(roll.color)} rolled ${total}`}
+      initial={{ scale: 0.8, rotate: -6, opacity: 0 }}
+      animate={{ scale: 1, rotate: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 420, damping: 16 }}
+    >
+      <span className="dice-pair">
+        <Die value={roll.dice[0]} />
+        <Die value={roll.dice[1]} />
+      </span>
+      <span className="dice-text">
+        <strong className={total === 7 ? "seven" : undefined}>{total}</strong>
+        <small>{name(roll.color)}</small>
+      </span>
+    </motion.div>
   );
 }

@@ -66,6 +66,7 @@ export type GameAction =
   | MaritimeTradeAction
   | EndTurnAction;
 
+export type MapTemplate = "BASE" | "MINI" | "TOURNAMENT";
 export type PlayerState = any;
 export type VictoryPointCard = "VICTORY_POINT";
 export type ResourceCard = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
@@ -131,6 +132,10 @@ export type GameState = {
   edgeActions?: GameAction[];
   nodeActions?: GameAction[];
   state_index: number;
+  vps_to_win: number;
+  discard_limit: number;
+  bank: Record<ResourceCard, number>;
+  dev_cards_left: number;
 };
 const DIRECTIONS = [
   "NORTH",

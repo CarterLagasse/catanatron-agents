@@ -1,0 +1,246 @@
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding: 7px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  z-index: 20;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  text-decoration: none;
+  flex: none;
+}
+
+.brand-mark {
+  width: 26px;
+  height: 30px;
+  background: linear-gradient(160deg, #f2b632 0 45%, #e26427 45% 72%, #1e5d29 72%);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+
+.brand-name {
+  font: 600 1.3rem var(--font-display);
+}
+
+.matchup {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 auto;
+  min-width: 0;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+
+  strong {
+    font: 600 1.02rem var(--font-display);
+    white-space: nowrap;
+  }
+  small {
+    color: var(--ink-2);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .status-dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--ink-3);
+  }
+  &.you {
+    border-color: rgba(242, 182, 50, 0.7);
+    background: rgba(242, 182, 50, 0.12);
+    .status-dot {
+      background: var(--gold);
+      animation: status-pulse 1.3s ease-in-out infinite;
+    }
+  }
+  &.done .status-dot {
+    background: var(--gold);
+  }
+}
+
+@keyframes status-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(242, 182, 50, 0);
+    transform: scale(1.2);
+  }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(242, 182, 50, 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-pill.you .status-dot {
+    animation: none;
+  }
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+
+  .MuiIconButton-root {
+    color: var(--ink-2);
+    &:hover {
+      color: var(--ink);
+    }
+  }
+  .panel-toggle {
+    display: none;
+  }
+}
+
+.new-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 7px 12px 7px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  &:hover {
+    background: var(--panel-2);
+  }
+}
+
+.speed-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  .MuiToggleButton-root {
+    padding: 3px 10px;
+    text-transform: none;
+  }
+}
+
+.help-dialog.MuiPaper-root {
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  h2 {
+    margin: 0 0 8px;
+    font: 600 1.5rem var(--font-display);
+  }
+  h3 {
+    margin: 14px 0 6px;
+    font: 600 1.05rem var(--font-display);
+  }
+  p {
+    margin: 0 0 8px;
+    color: var(--ink-2);
+    line-height: 1.45;
+    font-size: 0.92rem;
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    > div {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+  dd {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+  dt kbd {
+    display: inline-block;
+    min-width: 26px;
+    text-align: center;
+    padding: 1px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    font: 800 0.75rem var(--font-body);
+  }
+}
+
+@media (max-width: 1180px) {
+  .matchup,
+  .status-pill small {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .top-actions .panel-toggle {
+    display: inline-flex;
+  }
+  .new-game span {
+    display: none;
+  }
+  .new-game {
+    padding: 6px;
+    margin-left: 2px;
+  }
+}
+
+@media (max-width: 720px) {
+  .top-bar {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    padding: 5px 8px;
+    min-height: 0;
+  }
+  .brand-name {
+    font-size: 1.05rem;
+  }
+  .top-actions {
+    margin-left: auto;
+    .MuiIconButton-root {
+      padding: 5px;
+    }
+  }
+  .status-pill {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding: 4px 12px;
+    strong {
+      font-size: 0.92rem;
+    }
+  }
+}

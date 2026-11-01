@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 from pathlib import Path
 
 import numpy as np
@@ -36,6 +37,18 @@ def _restore_lists(tree):
     return {k: _restore_lists(v) for k, v in tree.items()}
 
 
+def replace_file(source, target, attempts=60):
+    """os.replace that waits out readers: on Windows it fails while target is open."""
+    for attempt in range(attempts):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(1)
+
+
 def save_params(path, params, hidden, rounds, map_type):
     """Writes atomically, so an interrupted run never leaves a corrupt checkpoint."""
     path = Path(path)
@@ -44,7 +57,7 @@ def save_params(path, params, hidden, rounds, map_type):
     meta = json.dumps({"hidden": hidden, "rounds": rounds, "map_type": map_type})
     temporary = path.with_suffix(".tmp.npz")
     np.savez(temporary, __meta__=np.array(meta), **arrays)
-    os.replace(temporary, path)
+    replace_file(temporary, path)
 
 
 def load_params(path):

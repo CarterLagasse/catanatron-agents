@@ -45,6 +45,7 @@ type NodeProps = {
   building: Building | null;
   color: Color | null;
   flashing: boolean;
+  recent: boolean;
   onClick: React.MouseEventHandler<HTMLDivElement>;
 };
 
@@ -56,6 +57,7 @@ export default function Node({
   building,
   color,
   flashing,
+  recent,
   onClick,
 }: NodeProps) {
   const [centerX, centerY] = center;
@@ -69,7 +71,7 @@ export default function Node({
   const isCity = building === "CITY";
   return (
     <div
-      className="node"
+      className={cn("node", { clickable: flashing, recent })}
       style={{
         width: size * (isCity ? 0.48 : 0.36),
         height: size * (isCity ? 0.48 : 0.36),
@@ -78,10 +80,11 @@ export default function Node({
         transform: `translateY(-50%) translateX(-50%)`,
       }}
       onClick={onClick}
+      role={flashing ? "button" : undefined}
+      aria-label={flashing ? "Build here" : undefined}
     >
       {color && <Building building={building} color={color} />}
       {flashing && <div className="pulse"></div>}
-      {/* {id} */}
     </div>
   );
 }

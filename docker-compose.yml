@@ -42,3 +42,11 @@ services:
     volumes:
       - /app/node_modules
       - ./ui:/app
+  react-ui-classic:
+    build: ./ui-backup
+    ports:
+      - 4001:4001
+    stdin_open: true
+    volumes:
+      - /app/node_modules
+      - ./ui-backup:/app

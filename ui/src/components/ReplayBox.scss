@@ -1,10 +1,35 @@
 .replay-box {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
 
-  .button-container {
-    display: flex;
-    gap: 10px;
+  .MuiIconButton-root {
+    color: var(--ink);
+    &.Mui-disabled {
+      color: var(--ink-3);
+    }
+    &.play {
+      background: var(--gold);
+      color: var(--gold-ink);
+      &:hover {
+        background: #ffc544;
+      }
+    }
+  }
+  .move-slider {
+    flex: 1;
+    margin: 0 14px;
+  }
+  .move-count {
+    flex: none;
+    min-width: 68px;
+    text-align: right;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
   }
 }

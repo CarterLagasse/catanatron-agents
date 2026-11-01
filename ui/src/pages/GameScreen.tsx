@@ -1,117 +1,212 @@
-import { useEffect, useState, useContext } from "react";
-import { useParams } from "react-router-dom";
-import PropTypes from "prop-types";
-import { GridLoader } from "react-spinners";
-import { useSnackbar } from "notistack";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Button, CircularProgress, Drawer, useMediaQuery } from "@mui/material";
 
-import ZoomableBoard from "./ZoomableBoard";
-import ActionsToolbar from "./ActionsToolbar";
-
-import "./GameScreen.scss";
-import LeftDrawer from "../components/LeftDrawer";
-import RightDrawer from "../components/RightDrawer";
-import { store } from "../store";
 import ACTIONS from "../actions";
-import { type StateIndex, getState, postAction } from "../utils/apiClient";
-import { dispatchSnackbar } from "../components/Snackbar";
-import { getHumanColor } from "../utils/stateUtils";
-import AnalysisBox from "../components/AnalysisBox";
+import ActionDock from "../components/ActionDock";
 import DiceRoll from "../components/DiceRoll";
-import PhaseBanner from "../components/PhaseBanner";
-import CostStrip from "../components/CostStrip";
-import { Divider } from "@mui/material";
+import GameOverDialog from "../components/GameOverDialog";
+import SidePanel from "../components/SidePanel";
+import TopBar, { type BotSpeed } from "../components/TopBar";
+import { CLASSIC_UI_URL } from "../configuration";
+import { store } from "../store";
+import type { Color, GameState } from "../utils/api.types";
+import { type StateIndex, getState, postAction } from "../utils/apiClient";
+import { gameStatus, turnsPlayed } from "../utils/gameLogic";
+import { getGame, loadSetting, playerLabel, saveResult, saveSetting } from "../utils/history";
+import { getHumanColor } from "../utils/stateUtils";
+import ZoomableBoard from "./ZoomableBoard";
+import "./GameScreen.scss";
 
-const ROBOT_THINKING_TIME = 300;
+// Least time a bot's move stays on screen before its next one.
+const BOT_PACE_MS: Record<BotSpeed, number> = { slow: 1200, normal: 550, fast: 120 };
 
-function GameScreen({ replayMode }: { replayMode: boolean }) {
-  const { gameId, stateIndex } = useParams();
-  const { state, dispatch } = useContext(store);
-  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
-  const [isBotThinking, setIsBotThinking] = useState(false);
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Load game state
-  useEffect(() => {
-    if (!gameId) {
-      return;
-    }
+/** Names by color: "You" for the human, otherwise as chosen when the game was created. */
+export function usePlayerNames(gameId: string | undefined, gameState: GameState | null) {
+  return useMemo(() => {
+    const record = getGame(gameId);
+    const human = gameState ? getHumanColor(gameState) : undefined;
+    return (color: Color) => (color === human ? "You" : playerLabel(record, color));
+  }, [gameId, gameState?.bot_colors.join()]);
+}
 
-    (async () => {
-      const gameState = await getState(gameId, stateIndex as StateIndex);
-      dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-    })();
-  }, [gameId, stateIndex, dispatch]);
-
-  // Maybe kick off next query?
-  useEffect(() => {
-    if (!state.gameState || replayMode || !gameId) {
-      return;
-    }
-    if (
-      state.gameState.bot_colors.includes(state.gameState.current_color) &&
-      !state.gameState.winning_color
-    ) {
-      // Make bot click next action.
-      (async () => {
-        setIsBotThinking(true);
-        const start = new Date();
-        const gameState = await postAction(gameId);
-        const requestTime = new Date().valueOf() - start.valueOf();
-        setTimeout(() => {
-          // simulate thinking
-          setIsBotThinking(false);
-          dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-          if (getHumanColor(gameState)) {
-            dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
-          }
-        }, ROBOT_THINKING_TIME - requestTime);
-      })();
-    }
-  }, [
-    gameId,
-    replayMode,
-    state.gameState,
-    dispatch,
-    enqueueSnackbar,
-    closeSnackbar,
-  ]);
-
-  if (!state.gameState) {
-    return (
-      <main>
-        <GridLoader
-          className="loader"
-          color="#000000"
-          size={100}
-        />
-      </main>
-    );
-  }
-
+export function GameMessage({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <main>
-      <h1 className="logo">Catanatron</h1>
-      <PhaseBanner isBotThinking={isBotThinking} />
-      <CostStrip />
-      <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-        <DiceRoll />
-        <ZoomableBoard replayMode={replayMode} />
-      </div>
-      <ActionsToolbar isBotThinking={isBotThinking} replayMode={replayMode} />
-      <LeftDrawer />
-      <RightDrawer>
-        <AnalysisBox stateIndex={"latest"}/>
-        <Divider />
-      </RightDrawer>
+    <main className="game-message">
+      <h2>{title}</h2>
+      {children}
+      <Link to="/">Back to the start</Link>
     </main>
   );
 }
 
-GameScreen.propTypes = {
-  /**
-   * Injected by the documentation to work in an iframe.
-   * You won't need it on your project.
-   */
-  window: PropTypes.func,
-};
+export default function GameScreen({ replayMode }: { replayMode: boolean }) {
+  const { gameId, stateIndex } = useParams();
+  const { state, dispatch } = useContext(store);
+  const [isBotThinking, setIsBotThinking] = useState(false);
+  const [botFailed, setBotFailed] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [gameOverOpen, setGameOverOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [speed, setSpeed] = useState<BotSpeed>(() => loadSetting("botSpeed", "normal"));
+  const [reveal, setReveal] = useState(() => loadSetting<string>("revealHidden", "no") === "yes");
+  const isWide = useMediaQuery("(min-width: 961px)");
+  const botMoveInFlight = useRef(false);
+  const currentGame = useRef(gameId);
+  currentGame.current = gameId;
+  const gameState = state.gameState;
 
-export default GameScreen;
+  const load = useCallback(async () => {
+    if (!gameId) return;
+    setLoadFailed(false);
+    try {
+      const loaded = await getState(gameId, stateIndex as StateIndex);
+      if (currentGame.current === gameId) {
+        dispatch({ type: ACTIONS.SET_GAME_STATE, data: loaded });
+      }
+    } catch (error) {
+      console.error("Couldn't load game", error);
+      setLoadFailed(true);
+    }
+  }, [gameId, stateIndex, dispatch]);
+
+  // Never show or play on the previous game's board while this one loads.
+  useEffect(() => {
+    dispatch({ type: ACTIONS.RESET_GAME });
+    setGameOverOpen(false);
+    load();
+  }, [load, dispatch]);
+
+  // Play the bots' moves one at a time, at a pace that can be followed.
+  useEffect(() => {
+    if (!gameState || replayMode || !gameId || botFailed || botMoveInFlight.current) return;
+    if (!gameState.bot_colors.includes(gameState.current_color) || gameState.winning_color) return;
+    botMoveInFlight.current = true;
+    setIsBotThinking(true);
+    (async () => {
+      const started = Date.now();
+      try {
+        const next = await postAction(gameId);
+        await sleep(Math.max(0, BOT_PACE_MS[speed] - (Date.now() - started)));
+        if (currentGame.current === gameId) {
+          dispatch({ type: ACTIONS.SET_GAME_STATE, data: next });
+        }
+      } catch (error) {
+        console.error("Bot move failed", error);
+        setBotFailed(true);
+      } finally {
+        botMoveInFlight.current = false;
+        setIsBotThinking(false);
+      }
+    })();
+  }, [gameId, replayMode, gameState, botFailed, speed, dispatch]);
+
+  // Record the finish once, and celebrate it.
+  const winner = gameState?.winning_color;
+  useEffect(() => {
+    if (!winner || !gameState || !gameId || replayMode) return;
+    const human = getHumanColor(gameState);
+    saveResult(gameId, {
+      winner,
+      humanWon: human ? winner === human : null,
+      turns: turnsPlayed(gameState),
+    });
+    setGameOverOpen(true);
+  }, [winner, gameId, replayMode]);
+
+  const name = usePlayerNames(gameId, gameState);
+
+  if (loadFailed) {
+    return (
+      <GameMessage title="Couldn't load this game">
+        <p>The game server may be stopped, or this game no longer exists.</p>
+        <Button variant="contained" onClick={load}>
+          Try again
+        </Button>
+      </GameMessage>
+    );
+  }
+  if (!gameState) {
+    return (
+      <main className="game-message">
+        <CircularProgress aria-label="Loading game" />
+      </main>
+    );
+  }
+
+  const record = getGame(gameId);
+  const opponents = gameState.colors.filter((color) => color !== getHumanColor(gameState));
+  const panel = (
+    <SidePanel
+      gameState={gameState}
+      name={name}
+      gainsByRecord={state.gainsByRecord}
+      revealHidden={reveal || replayMode}
+    />
+  );
+
+  return (
+    <div className="game-shell">
+      <TopBar
+        status={
+          replayMode
+            ? { title: `Viewing move ${stateIndex}`, detail: "Read only", tone: "wait" }
+            : gameStatus(gameState, name, state.buildMode)
+        }
+        matchup={record ? `vs ${opponents.map(name).join(", ")}` : undefined}
+        speed={speed}
+        onSpeedChange={(value) => {
+          setSpeed(value);
+          saveSetting("botSpeed", value);
+        }}
+        revealHidden={reveal}
+        onRevealChange={(value) => {
+          setReveal(value);
+          saveSetting("revealHidden", value ? "yes" : "no");
+        }}
+        replayHref={`/replays/${gameId}`}
+        classicHref={CLASSIC_UI_URL ? `${CLASSIC_UI_URL}/games/${gameId}` : undefined}
+        onOpenPanel={() => setPanelOpen(true)}
+      />
+      <div className="game-body">
+        <div className="board-column">
+          <div className="board-stage">
+            <DiceRoll gameState={gameState} name={name} />
+            <ZoomableBoard replayMode={replayMode} name={name} />
+            {botFailed && (
+              <div className="bot-error" role="alert">
+                <span>Lost contact with the game server during the bot's move.</span>
+                <Button size="small" variant="contained" onClick={() => setBotFailed(false)}>
+                  Retry
+                </Button>
+              </div>
+            )}
+          </div>
+          {!replayMode && <ActionDock isBotThinking={isBotThinking} />}
+        </div>
+        {isWide ? (
+          <aside className="side-panel">{panel}</aside>
+        ) : (
+          <Drawer
+            anchor="right"
+            open={panelOpen}
+            onClose={() => setPanelOpen(false)}
+            slotProps={{ paper: { className: "side-drawer" } }}
+          >
+            {panel}
+          </Drawer>
+        )}
+      </div>
+      {winner && !replayMode && (
+        <GameOverDialog
+          gameState={gameState}
+          name={name}
+          open={gameOverOpen}
+          onClose={() => setGameOverOpen(false)}
+        />
+      )}
+    </div>
+  );
+}

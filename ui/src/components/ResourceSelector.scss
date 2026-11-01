@@ -1,91 +1,85 @@
-@use "../variables.scss";
+// Shared look for the card-choosing dialogs.
+.game-dialog .MuiDialog-paper {
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--panel-2);
+  background-image: none;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
 
-.resource-selector {
-  .MuiPaper-root {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
-    border-radius: 8px;
-    border: 1px solid #333;
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.05);
+  h2 {
+    margin: 0;
+    font: 600 1.35rem var(--font-display);
   }
-
-  .MuiDialogTitle-root {
-    text-align: center;
-    background-color: #222;
-    padding: 12px 20px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    border-bottom: 1px solid #333;
+  > p {
+    margin: 4px 0 14px;
+    color: var(--ink-2);
+    font-size: 0.92rem;
   }
+}
 
-  .MuiDialogContent-root {
-    padding: 20px;
+.game-dialog .resource-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.game-dialog .resource-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 2px 8px;
+  border: 2px solid transparent;
+  border-radius: 11px;
+  background: linear-gradient(180deg, #fff9ea, #f1e4c4);
+  color: #26323c;
+  font: 800 0.76rem var(--font-body);
+  cursor: pointer;
+  transition: transform 110ms ease, border-color 110ms ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--gold);
+    transform: translateY(-2px);
   }
-
-  .resource-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-
-    @media (max-width: variables.$sm-breakpoint) {
-      grid-template-columns: 1fr;
-    }
+  &:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
   }
+  &:disabled {
+    opacity: 0.32;
+    filter: saturate(0.3);
+    cursor: not-allowed;
+  }
+}
 
-  .resource-button {
-    height: 40px;
-    font-size: 0.9rem;
+.game-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+
+  button {
     text-transform: none;
-    background-color: #2a2a2a;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    border: 1px solid #444;
-    overflow: hidden;
-    position: relative;
-
-    &:hover,
-    &:focus {
-      background-color: #222;
-    }
-
-    .wood {
-      color: #009b00;
-    }
-    .brick {
-      color: #ff0000;
-    }
-    .wheat {
-      color: #ba9202;
-    }
-    .sheep {
-      color: #3eda58;
-    }
-    .ore {
-      color: #b0b0b0;
-    }
-
-    .resource-name {
-      font-weight: bold;
-    }
-
-    .plus {
-      color: #ffffff;
-      margin: 0 4px;
-    }
+    font-weight: 800;
   }
+}
 
-  .MuiDialogActions-root {
-    background-color: #222;
-    padding: 12px 20px;
-    border-top: 1px solid #333;
+@media (max-width: 480px) {
+  .game-dialog .MuiDialog-paper {
+    margin: 12px;
+    padding: 16px;
+    width: calc(100% - 24px);
   }
-
-  .cancel-button {
-    color: #0099ff;
-    font-weight: bold;
-
-    &:hover {
-      background-color: rgba(0, 153, 255, 0.1);
+  .game-dialog .resource-grid {
+    gap: 5px;
+  }
+  .game-dialog .resource-button {
+    font-size: 0.68rem;
+    svg {
+      width: 30px;
+      height: 30px;
     }
   }
 }

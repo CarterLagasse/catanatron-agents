@@ -11,6 +11,11 @@ pip install -e ".[jax]"
 Scope: 1v1 games, on the BASE, TOURNAMENT and MINI maps. Domestic trades are not
 modelled, the same as in the gym environment.
 
+[RESULTS.md](RESULTS.md) has measured agent strength and how to reproduce it. To play
+against the agents, start the web server from the repository root in an environment
+with JAX, then pick a PSRO or PPO level as Player 2. They are listed only if their
+files exist under `runs/`.
+
 ## Train
 
 ```bash
@@ -21,17 +26,27 @@ python -m catanatron.jax_rl.ppo --run-dir runs/ppo --timesteps 50000000
 python -m catanatron.jax_rl.psro --run-dir runs/psro --iterations 12
 ```
 
-PPO writes `best.npz`, `latest.npz` and `metrics.jsonl`. PSRO writes one
+PPO writes `best.npz`, `latest.npz`, `snapshots/` and `metrics.jsonl`. PSRO writes one
 `br_XX.npz` per iteration and `population.json`, which holds the payoff matrix and
 the Nash mixture.
 
 ## Evaluate in the real engine
 
 ```bash
+# Comparisons that can be trusted: shared seeds, saved games, controls, intervals
+python -m catanatron.jax_rl.tournament --run-dir runs/eval \
+    --agent PPO=runs/ppo/best.npz:1 --agent PSRO=runs/psro:1 --agent F-control=bot:F \
+    --vs F=4000 --vs AB:2=1000
+
+# Quick looks
 python -m catanatron.jax_rl.jax_player --agent runs/ppo/best.npz --opponents R,W,F,AB:2 --games 200
 catanatron-play --players=JAX:runs/ppo/best.npz,F --num=100
 catanatron-play --players=JAX:runs/psro,F --num=100   # plays the PSRO mixture
 ```
+
+`tournament` writes `report.md`. Rerun the same command to finish an interrupted
+run. `F-control` plays the engine's bot against itself and must land near 50%. For a
+95% interval of about +/- 1.5 points at these win rates, play about 4000 games.
 
 Use relative paths in `--players`: a Windows drive colon would split the player spec.
 
@@ -48,6 +63,8 @@ Use relative paths in `--players`: a Windows drive colon would split the player 
 | `psro.py` | Meta-solver, payoff matrix, best-response loop |
 | `evaluate.py` | Fast JAX-vs-JAX matches |
 | `bridge.py`, `jax_player.py` | Run trained agents in the Python engine |
+| `tournament.py` | Large engine matches with a readable report |
+| `benchmark.py` | Measures simulation and training throughput |
 
 ## Guarantees and how they are checked
 
@@ -61,7 +78,13 @@ Use relative paths in `--players`: a Windows drive colon would split the player 
 ## Performance notes
 
 - On native Windows JAX is CPU-only. To use an NVIDIA GPU, run under WSL2 or Linux
-  with `pip install "jax[cuda12]"`; no code changes are needed.
+  with `pip install "jax[cuda12]"`; no code changes are needed. An RTX 4050 Laptop
+  trains at about 43,000 ticks/s and 1 GB of VRAM with the defaults, against about
+  3,000 ticks/s on a Core Ultra 7 155H. Set `XLA_PYTHON_CLIENT_PREALLOCATE=false`.
+- Keep `--num-envs` at 256 on that GPU: 1024 was slower (38,000 ticks/s), because
+  each sample still costs a gradient, which takes about two thirds of the time.
 - Gradients are the bottleneck on CPU, so width (`--hidden`) sets training speed.
+- Engine evaluation stays on the CPU: it decides one move at a time, which a GPU
+  would slow down.
 - Rollouts store packed game states and rebuild observations per minibatch, which
   keeps buffers small. If memory is tight, raise `num_minibatches` in `PPOConfig`.

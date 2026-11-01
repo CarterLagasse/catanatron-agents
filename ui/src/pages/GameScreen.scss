@@ -1,115 +1,85 @@
-@use "../variables.scss";
-
-.MuiToolbar-root {
-  background: variables.$black;
-}
-
-h6.MuiTypography-h6 {
-  font-family: "Bungee Inline", sans-serif;
-}
-
-@media (min-width: 600px) {
-  #root .snackbar-container {
-    display: none;
-  }
-}
-
-// For Snackbar
-#root .snackbar-container {
-  z-index: 1200;
-  left: 50% !important;
-  bottom: 0px;
-  transform: translateX(-50%);
-  max-width: variables.$sm-breakpoint;
-  width: 100%;
-  .MuiCollapse-container {
-    padding: 0 10px;
-    width: 100%;
-    .MuiCollapse-wrapper {
-      margin-top: 10px;
-      margin-bottom: 10px;
-      height: 60px;
-      padding: 0;
-
-      > div > div {
-        height: 100%;
-
-        > div {
-          height: 100%;
-        }
-      }
-    }
-  }
-}
-
-main {
-  .logo {
-    margin: 5px 20px 0 20px;
-    text-align: center;
-  }
-
-  background: #164a8a; // ocean from goal.png
-  color: white;
+.game-shell {
   height: 100%;
   display: flex;
   flex-direction: column;
-
-  .loader {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .board-container,
-  .loader {
-    height: 100%;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+  background: var(--bg);
+  color: var(--ink);
 }
 
-.board-container {
-  .react-transform-wrapper {
-      height: 100%;
-      width: 100%;
-    }
-  .react-transform-component {
-    height: 100%;
-    width: 100%;
-
-    .react-transform-element {
-      height: 100%;
-      width: 100%;
-    }
-  }
-
-  .board {
-    position: relative;
-    opacity: 0;
-    height: 100%;
-    width: 100%;
-  }
-  .board.show {
-    opacity: 1;
-  }
+.game-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
-// Medium+ screens - Both drawers permanent (unified md breakpoint, fixes gap 600-960)
-@media (min-width: variables.$md-breakpoint) {
-  main {
-    padding-left: 280px;
-    padding-right: 280px;
-    .board-container {
-      margin-right: 0;
-      margin-left: 0;
-    }
-  }
+.board-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
-@media (min-width: variables.$lg-breakpoint) {
-  main {
-    padding-left: 280px;
-    padding-right: 280px;
+
+.board-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.side-panel {
+  flex: none;
+  width: 340px;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  min-height: 0;
+}
+
+.side-drawer.MuiPaper-root {
+  width: min(340px, 92vw);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.bot-error {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  border-radius: 10px;
+  background: #3a1a1a;
+  border: 1px solid #a33b3b;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.game-message {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--ink);
+
+  h2 {
+    margin: 0;
+    font: 600 1.6rem var(--font-display);
+  }
+  p {
+    margin: 0;
+    color: var(--ink-2);
+  }
+  a {
+    color: var(--gold);
+    font-weight: 700;
   }
 }

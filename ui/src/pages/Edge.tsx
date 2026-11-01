@@ -19,6 +19,7 @@ type EdgeProps = {
   direction: Direction;
   color: Color | null;
   flashing: boolean;
+  recent: boolean;
   onClick: React.MouseEventHandler;
 };
 
@@ -30,6 +31,7 @@ export default function Edge({
   direction,
   color,
   flashing,
+  recent,
   onClick,
 }: EdgeProps) {
   const [centerX, centerY] = center;
@@ -39,14 +41,17 @@ export default function Edge({
   return (
     <div
       id={id}
-      className={"edge " + direction}
+      className={cn("edge", direction, { clickable: flashing, recent })}
       style={{
         left: tileX,
         top: tileY,
         width: size * 0.9 + 8,
+        height: Math.max(flashing ? 14 : 10, size * (flashing ? 0.26 : 0.22)),
         transform: transform,
       }}
       onClick={onClick}
+      role={flashing ? "button" : undefined}
+      aria-label={flashing ? "Build a road here" : undefined}
     >
       {color && <Road color={color} />}
       {flashing && <div className="pulse"></div>}

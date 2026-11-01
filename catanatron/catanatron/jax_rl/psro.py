@@ -125,15 +125,7 @@ class Population:
         }
         temporary = run_dir / "population.tmp.json"
         temporary.write_text(json.dumps(data, indent=1))
-        # On Windows a replace fails while anything has the target open.
-        for attempt in range(60):
-            try:
-                temporary.replace(run_dir / "population.json")
-                break
-            except PermissionError:
-                if attempt == 59:
-                    raise
-                time.sleep(1)
+        checkpoint.replace_file(temporary, run_dir / "population.json")
 
 
 def evaluate_member(arena, population, kind, params, key):
@@ -353,6 +345,15 @@ def main():
     parser.add_argument("--num-envs", type=int, default=PSROConfig.num_envs)
     parser.add_argument("--hidden", type=int, default=PSROConfig.hidden)
     parser.add_argument("--rounds", type=int, default=PSROConfig.rounds)
+    parser.add_argument(
+        "--eval-envs", type=int, default=PSROConfig.eval_envs, help="more means less noisy payoffs"
+    )
+    parser.add_argument(
+        "--scripted-population",
+        default=",".join(PSROConfig.scripted_population),
+        help="scripted bots in the population. Leave out any that weak networks cannot beat, "
+        "or the mixture ends up playing the bot and not a network",
+    )
     parser.add_argument("--init-from", default=None, help="checkpoint to warm start from")
     parser.add_argument("--resume", action="store_true", help="continue the run in --run-dir")
     parser.add_argument("--max-hours", type=float, default=None)
@@ -367,6 +368,8 @@ def main():
         num_envs=args.num_envs,
         hidden=args.hidden,
         rounds=args.rounds,
+        eval_envs=args.eval_envs,
+        scripted_population=tuple(args.scripted_population.split(",")),
         seed=args.seed,
     )
     init_params = checkpoint.load_params(args.init_from)[0] if args.init_from else None

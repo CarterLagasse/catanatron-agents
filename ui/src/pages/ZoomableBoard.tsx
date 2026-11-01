@@ -1,205 +1,177 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import memoize from "fast-memoize";
-import { useMediaQuery, useTheme } from "@mui/material";
-
-import useWindowSize from "../utils/useWindowSize";
+import { Dialog, Button } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
+import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong";
 
 import "./Board.scss";
-import { store } from "../store";
-import { isPlayersTurn } from "../utils/stateUtils";
-import { postAction } from "../utils/apiClient";
-import type { CatanState } from "../store";
-import { useParams } from "react-router";
-import ACTIONS from "../actions";
+import { store, type BuildMode } from "../store";
+import useGameActions from "../hooks/useGameActions";
 import Board from "./Board";
-import type { GameAction, TileCoordinate } from "../utils/api.types";
+import type {
+  BuildRoadAction,
+  BuildSettlementAction,
+  Color,
+  GameAction,
+  GameState,
+  MoveRobberAction,
+  TileCoordinate,
+} from "../utils/api.types";
+import {
+  actionsOfType,
+  isFreeRoadMode,
+  isHumanTurn,
+  robberActionsFor,
+} from "../utils/gameLogic";
 
-/**
- * Returns object representing actions to be taken if click on node.
- * @returns {3 => ["BLUE", "BUILD_CITY", 3], ...}
- */
-function buildNodeActions(state: CatanState) {
-  if (!state.gameState)
-    throw new Error("GameState is not ready!");
-
-  if (!isPlayersTurn(state.gameState)) {
-    return {};
-  }
-
+/** Returns actions by node id, e.g. {3: ["BLUE", "BUILD_CITY", 3]}. */
+function buildNodeActions(gs: GameState, buildMode: BuildMode) {
   const nodeActions: Record<number, GameAction> = {};
-  const buildInitialSettlementActions = state.gameState.is_initial_build_phase
-    ? state.gameState.current_playable_actions.filter(
-        (action) => action[1] === "BUILD_SETTLEMENT"
-      )
-    : [];
-  const inInitialBuildPhase = state.gameState.is_initial_build_phase;
-  if (inInitialBuildPhase) {
-    buildInitialSettlementActions.forEach((action) => {
+  if (!isHumanTurn(gs)) return nodeActions;
+  const type = gs.is_initial_build_phase || buildMode === "SETTLEMENT"
+    ? "BUILD_SETTLEMENT"
+    : buildMode === "CITY"
+      ? "BUILD_CITY"
+      : null;
+  if (type) {
+    (actionsOfType(gs, type) as BuildSettlementAction[]).forEach((action) => {
       nodeActions[action[2]] = action;
     });
-  } else if (state.isBuildingSettlement) {
-    state.gameState.current_playable_actions
-      .filter((action) => action[1] === "BUILD_SETTLEMENT")
-      .forEach((action) => {
-        nodeActions[action[2]] = action;
-      });
-  } else if (state.isBuildingCity) {
-    state.gameState.current_playable_actions
-      .filter((action) => action[1] === "BUILD_CITY")
-      .forEach((action) => {
-        nodeActions[action[2]] = action;
-      });
   }
   return nodeActions;
 }
 
-function buildEdgeActions(state: CatanState) {
-  if (!state.gameState)
-    throw new Error("GameState is not ready!");
-  if (!isPlayersTurn(state.gameState)) {
-    return {};
-  }
-
+function buildEdgeActions(gs: GameState, buildMode: BuildMode) {
   const edgeActions: Record<`${number},${number}`, GameAction> = {};
-  const buildInitialRoadActions = state.gameState.is_initial_build_phase
-    ? state.gameState.current_playable_actions.filter(
-        (action) => action[1] === "BUILD_ROAD"
-      )
-    : [];
-  const inInitialBuildPhase = state.gameState.is_initial_build_phase;
-  if (inInitialBuildPhase) {
-    buildInitialRoadActions.forEach((action) => {
+  if (!isHumanTurn(gs)) return edgeActions;
+  if (gs.is_initial_build_phase || buildMode === "ROAD" || isFreeRoadMode(gs)) {
+    (actionsOfType(gs, "BUILD_ROAD") as BuildRoadAction[]).forEach((action) => {
       edgeActions[`${action[2][0]},${action[2][1]}`] = action;
-      console.log(Object.keys(edgeActions), action);
     });
-  } else if (state.isBuildingRoad || state.isRoadBuilding) {
-    state.gameState.current_playable_actions
-      .filter((action) => action[1] === "BUILD_ROAD")
-      .forEach((action) => {
-        edgeActions[`${action[2][0]},${action[2][1]}`] = action;
-      });
   }
   return edgeActions;
 }
 
-type ZoomableBoardProps = {
-  replayMode: boolean;
+function useElementSize() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, ...size };
 }
 
-export default function ZoomableBoard({ replayMode }: ZoomableBoardProps) {
-  const { gameId } = useParams();
-  const { state, dispatch } = useContext(store);
-  const { width, height } = useWindowSize();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.up("md"));
-  const [show, setShow] = useState(false);
-  const gameState = state.gameState
-  if (!gameState)
-    throw new Error("GameState is not ready!");
-  if (!gameId)
-    throw new Error("expecting gameId in URL");
+export default function ZoomableBoard({
+  replayMode,
+  name,
+}: {
+  replayMode: boolean;
+  name: (color: Color) => string;
+}) {
+  const { state } = useContext(store);
+  const { act } = useGameActions();
+  const { ref, width, height } = useElementSize();
+  const [victimChoices, setVictimChoices] = useState<MoveRobberAction[]>([]);
+  const gameState = state.gameState as GameState;
 
-  // TODO: Move these up to GameScreen and let Zoomable be presentational component
-  // https://stackoverflow.com/questions/61255053/react-usecallback-with-parameter
-  const buildOnNodeClick = useCallback(
-    memoize((id, action) => async () => {
-      console.log("Clicked Node ", id, action);
-      if (action) {
-        const gameState = await postAction(gameId, action);
-        dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-      }
-    }),
-    []
-  );
-  const buildOnEdgeClick = useCallback(
-    memoize((id, action) => async () => {
-      console.log("Clicked Edge ", id, action);
-      if (action) {
-        const gameState = await postAction(gameId, action);
-        dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-      }
-    }),
-    []
-  );
-  const handleTileClick = useCallback(
-    memoize((coordinate: TileCoordinate) => {
-      console.log("Clicked Tile ", coordinate);
-      if (state.isMovingRobber) {
-        // Find the "MOVE_ROBBER" action in current_playable_actions that
-        // corresponds to the tile coordinate selected by the user
-        const matchingAction = gameState.current_playable_actions.find(
-          (action) =>
-            action[1] === "MOVE_ROBBER" &&
-            action[2][0].every(
-              (val: number, index: number) => val === coordinate[index],
-            ),
-        );
-        if (matchingAction) {
-          postAction(gameId, matchingAction).then((gameState) => {
-            dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-          });
-        }
-      }
-    }),
-    [state.isMovingRobber]
-  );
-
-  const nodeActions = replayMode ? {} : buildNodeActions(state);
-  const edgeActions = replayMode ? {} : buildEdgeActions(state);
+  const nodeActions = replayMode ? {} : buildNodeActions(gameState, state.buildMode);
+  const edgeActions = replayMode ? {} : buildEdgeActions(gameState, state.buildMode);
+  const isMovingRobber =
+    !replayMode && isHumanTurn(gameState) && gameState.current_prompt === "MOVE_ROBBER";
   const robberCoordinates = new Set(
-    state.isMovingRobber
-      ? gameState.current_playable_actions
-          .filter((action) => action[1] === "MOVE_ROBBER")
-          .map((action) => `${action[2][0]}`)
-      : []
+    isMovingRobber
+      ? (actionsOfType(gameState, "MOVE_ROBBER") as MoveRobberAction[]).map(
+          (action) => `${action[2][0]}`,
+        )
+      : [],
   );
 
-  useEffect(() => {
-    setTimeout(() => {
-      setShow(true);
-    }, 300);
-  }, []);
-
-  if (!width || !height) return;
+  const handleTileClick = (coordinate: TileCoordinate) => {
+    if (!isMovingRobber) return;
+    const actions = robberActionsFor(gameState, coordinate) as MoveRobberAction[];
+    if (actions.length === 1) {
+      act(actions[0]);
+    } else if (actions.length > 1) {
+      setVictimChoices(actions);
+    }
+  };
 
   return (
-    <TransformWrapper
-      minScale={0.55}
-      maxScale={2.4}
-      initialScale={1}
-      centerOnInit
-      limitToBounds={false}
-      wheel={{ step: 0.12 }}
-      doubleClick={{ mode: "reset" }}
-      panning={{ velocityDisabled: false }}
-    >
-      {({ zoomIn, zoomOut, resetTransform }) => (
-        <div className="board-container">
-          <div className="board-controls">
-            <button className="board-ctrl" onClick={() => zoomIn()} aria-label="Zoom in">+</button>
-            <button className="board-ctrl" onClick={() => zoomOut()} aria-label="Zoom out">−</button>
-            <button className="board-ctrl" onClick={() => resetTransform()} aria-label="Reset view">⟲</button>
-          </div>
-          <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }} contentStyle={{ width: "100%", height: "100%" }}>
-            <Board
-              width={width}
-              height={height}
-              buildOnNodeClick={buildOnNodeClick}
-              buildOnEdgeClick={buildOnEdgeClick}
-              handleTileClick={handleTileClick}
-              nodeActions={nodeActions}
-              edgeActions={edgeActions}
-              replayMode={replayMode}
-              show={show}
-              gameState={gameState}
-              isMobile={isMobile}
-              isMovingRobber={state.isMovingRobber}
-              robberCoordinates={robberCoordinates}
-            />
-          </TransformComponent>
-        </div>
+    <div className="board-container" ref={ref}>
+      {width > 0 && height > 0 && (
+        <TransformWrapper
+          minScale={0.6}
+          maxScale={3}
+          initialScale={1}
+          limitToBounds={false}
+          wheel={{ step: 0.12 }}
+          doubleClick={{ mode: "reset" }}
+          panning={{ velocityDisabled: true }}
+        >
+          {({ zoomIn, zoomOut, resetTransform }) => (
+            <>
+              <div className="board-controls">
+                <button className="board-ctrl" onClick={() => zoomIn()} aria-label="Zoom in">
+                  <AddIcon fontSize="small" />
+                </button>
+                <button className="board-ctrl" onClick={() => zoomOut()} aria-label="Zoom out">
+                  <RemoveIcon fontSize="small" />
+                </button>
+                <button className="board-ctrl" onClick={() => resetTransform()} aria-label="Reset view">
+                  <CenterFocusStrongIcon fontSize="small" />
+                </button>
+              </div>
+              <TransformComponent
+                wrapperStyle={{ width: "100%", height: "100%" }}
+                contentStyle={{ width: "100%", height: "100%" }}
+              >
+                <Board
+                  width={width}
+                  height={height}
+                  onNodeAction={(action) => act(action)}
+                  onEdgeAction={(action) => act(action)}
+                  handleTileClick={handleTileClick}
+                  nodeActions={nodeActions}
+                  edgeActions={edgeActions}
+                  replayMode={replayMode}
+                  gameState={gameState}
+                  isMovingRobber={isMovingRobber}
+                  robberCoordinates={robberCoordinates}
+                />
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
       )}
-    </TransformWrapper>
+      <Dialog
+        open={victimChoices.length > 0}
+        onClose={() => setVictimChoices([])}
+        slotProps={{ paper: { className: "victim-dialog" } }}
+      >
+        <h3>Steal from who?</h3>
+        {victimChoices.map((action) => (
+          <Button
+            key={String(action[2][1])}
+            variant="contained"
+            onClick={() => {
+              setVictimChoices([]);
+              act(action);
+            }}
+          >
+            {action[2][1] ? name(action[2][1] as Color) : "Nobody"}
+          </Button>
+        ))}
+      </Dialog>
+    </div>
   );
 }

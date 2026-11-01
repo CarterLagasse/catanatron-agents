@@ -1,6 +1,6 @@
 import pytest
 import json
-from catanatron.web import create_app
+from catanatron.web import api, create_app
 from catanatron.web.models import db, GameState, get_game_state
 
 
@@ -44,6 +44,63 @@ def test_post_game_endpoint(client):
             db.session.query(GameState).filter_by(uuid=data["game_id"]).first()
             is not None
         )
+
+
+@pytest.fixture
+def jax_agent(tmp_path, monkeypatch):
+    """A small untrained agent standing in for the trained ones in runs/."""
+    jax = pytest.importorskip("jax")
+    from catanatron.jax_rl import checkpoint
+    from catanatron.jax_rl.env import CatanEnv
+    from catanatron.jax_rl.network import GraphPolicy
+
+    params = GraphPolicy(CatanEnv("BASE"), 8, 1).init(jax.random.PRNGKey(0))
+    path = tmp_path / "agent.npz"
+    checkpoint.save_params(path, params, 8, 1, "BASE")
+    monkeypatch.setattr(
+        api, "JAX_AGENTS", {"test": {"label": "Test agent", "path": str(path)}}
+    )
+    return "JAX:test"
+
+
+def test_jax_agents_lists_only_agents_on_disk(client, jax_agent, monkeypatch):
+    agents = client.get("/api/jax-agents").get_json()["agents"]
+    assert agents == [{"key": jax_agent, "label": "Test agent"}]
+
+    monkeypatch.setattr(
+        api, "JAX_AGENTS", {"gone": {"label": "Gone", "path": "does/not/exist.npz"}}
+    )
+    assert client.get("/api/jax-agents").get_json()["agents"] == []
+
+
+def test_human_can_play_a_jax_agent_across_requests(client, jax_agent):
+    """Each request reloads the game from the database, so the agent must survive
+    being pickled and keep playing, whichever color it gets."""
+    response = client.post("/api/games", json={"players": ["HUMAN", jax_agent]})
+    assert response.status_code == 200
+    game_id = response.get_json()["game_id"]
+
+    # An empty body makes whoever is next play one move.
+    for _ in range(40):
+        assert client.post(f"/api/games/{game_id}/actions").status_code == 200
+
+    with client.application.app_context():
+        game = get_game_state(game_id)
+    assert len(game.state.action_records) == 40
+    assert any(player.__class__.__name__ == "JaxPlayer" for player in game.state.players)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"players": ["HUMAN", "{agent}", "RANDOM"]},
+        {"players": ["HUMAN", "{agent}"], "map_template": "MINI"},
+        {"players": ["HUMAN", "JAX:unknown"]},
+    ],
+)
+def test_jax_agents_reject_setups_they_cannot_play(client, jax_agent, extra):
+    body = {**extra, "players": [p.format(agent=jax_agent) for p in extra["players"]]}
+    assert client.post("/api/games", json=body).status_code == 400
 
 
 def test_post_game_endpoint_accepts_custom_config(client):

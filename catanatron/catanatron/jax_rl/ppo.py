@@ -16,7 +16,6 @@ Train:
 
 import argparse
 import json
-import os
 import pickle
 import time
 from dataclasses import asdict, dataclass
@@ -534,7 +533,7 @@ def _save_resume_state(run_dir, **state):
     temporary = run_dir / "train_state.tmp.pkl"
     with temporary.open("wb") as f:
         pickle.dump(state, f)
-    os.replace(temporary, run_dir / "train_state.pkl")
+    checkpoint.replace_file(temporary, run_dir / "train_state.pkl")
 
 
 def _load_resume_state(trainer, run_dir, log):
@@ -573,6 +572,10 @@ def _load_resume_state(trainer, run_dir, log):
 def train(config, run_dir, log=print, init_params=None, resume=False):
     """Self-play with a league of past selves. Saves `best.npz` and `latest.npz`,
     plus `train_state.pkl` at each evaluation so a run can continue with resume=True.
+
+    Each evaluation also keeps `snapshots/it_XXXXX.npz`. `best.npz` is picked from
+    a few hundred noisy games, so compare snapshots with tournament.py before
+    trusting it. It is the same network as `latest.npz` when the last evaluation wins.
     """
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -649,6 +652,7 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
                     score[name] = result
                     row[f"eval_{name}_win"] = result["win_rate"]
                 checkpoint.save_params(run_dir / "latest.npz", params, config.hidden, config.rounds, config.map_type)
+                checkpoint.save_params(run_dir / "snapshots" / f"it_{iteration:05d}.npz", params, config.hidden, config.rounds, config.map_type)
                 if score["heuristic"]["win_rate"] >= best_score:
                     best_score = score["heuristic"]["win_rate"]
                     checkpoint.save_params(run_dir / "best.npz", params, config.hidden, config.rounds, config.map_type)
@@ -719,6 +723,7 @@ def main():
     parser.add_argument("--pool-fraction", type=float, default=PPOConfig.pool_fraction)
     parser.add_argument("--scripted-fraction", type=float, default=PPOConfig.scripted_fraction)
     parser.add_argument("--eval-every", type=int, default=PPOConfig.eval_every)
+    parser.add_argument("--eval-envs", type=int, default=PPOConfig.eval_envs)
     parser.add_argument("--init-from", default=None, help="checkpoint to warm start from")
     parser.add_argument("--resume", action="store_true", help="continue the run in --run-dir")
     parser.add_argument("--seed", type=int, default=0)
@@ -739,6 +744,7 @@ def main():
         pool_fraction=args.pool_fraction,
         scripted_fraction=args.scripted_fraction,
         eval_every=args.eval_every,
+        eval_envs=args.eval_envs,
         seed=args.seed,
     )
     init_params = None

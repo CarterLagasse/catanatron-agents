@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import logging
 import re
@@ -22,6 +23,64 @@ VALID_MAP_TEMPLATES = {"BASE", "MINI", "TOURNAMENT"}
 # ppo_agents folder at repo root (mounted as /app/ppo_agents in docker)
 PPO_AGENTS_ROOT = Path("ppo_agents")
 
+# Difficulty levels trained with catanatron.jax_rl, measured in jax_rl/RESULTS.md. They
+# only know 1v1 on the BASE map. Player keys are "JAX:<name>".
+JAX_AGENTS = {
+    "psro-easy": {
+        "label": "PSRO - Easy",
+        "path": "runs/levels/psro_easy_v2",
+        "group": "PSRO",
+        "level": "Easy",
+        "win_rate": 38.5,
+    },
+    "psro-medium": {
+        "label": "PSRO - Medium",
+        "path": "runs/psro",
+        "group": "PSRO",
+        "level": "Medium",
+        "win_rate": 61.5,
+    },
+    "psro-hard": {
+        "label": "PSRO - Hard",
+        "path": "runs/gpu/psro",
+        "group": "PSRO",
+        "level": "Hard",
+        "win_rate": 74.6,
+    },
+    "ppo-easy": {
+        "label": "PPO - Easy",
+        "path": "runs/gpu/ppo/snapshots/it_00200.npz",
+        "group": "PPO",
+        "level": "Easy",
+        "win_rate": 32.4,
+    },
+    "ppo-medium": {
+        "label": "PPO - Medium",
+        "path": "runs/gpu/ppo/snapshots/it_00400.npz",
+        "group": "PPO",
+        "level": "Medium",
+        "win_rate": 50.6,
+    },
+    "ppo-hard": {
+        "label": "PPO - Hard",
+        "path": "runs/gpu/ppo/selected.npz",
+        "group": "PPO",
+        "level": "Hard",
+        "win_rate": 69.5,
+    },
+}
+
+
+def _list_jax_agents():
+    """The agents that can actually be played on this server."""
+    if importlib.util.find_spec("jax") is None:
+        return []
+    return [
+        {"key": f"JAX:{name}", **{k: v for k, v in agent.items() if k != "path"}}
+        for name, agent in JAX_AGENTS.items()
+        if Path(agent["path"]).exists()
+    ]
+
 
 def _list_ppo_agents():
     """List all .zip agents under ppo_agents (recursive, relative posix paths)."""
@@ -44,6 +103,13 @@ def _list_ppo_agents():
 def player_factory(player_key):
     raw = player_key[0]
     color = player_key[1]
+    if isinstance(raw, str) and raw.startswith("JAX:"):
+        agent = JAX_AGENTS.get(raw[len("JAX:") :])
+        if agent is None:
+            raise ValueError(f"Invalid player key: {raw}")
+        from catanatron.jax_rl.jax_player import JaxPlayer
+
+        return JaxPlayer(color, agent["path"], greedy=True)
     # Handle PPO agents: "PPO" or "PPO:<path>[:rep[:map[:det]]]"
     if isinstance(raw, str) and raw.startswith("PPO"):
         # Split PPO prefix
@@ -145,6 +211,13 @@ def post_game_endpoint():
     friendly_robber = request.json.get("friendly_robber", False)
     if not isinstance(friendly_robber, bool):
         abort(400, description="'friendly_robber' must be a boolean")
+
+    jax_keys = [k for k in player_keys if isinstance(k, str) and k.startswith("JAX:")]
+    if jax_keys and (len(player_keys) != 2 or map_template != "BASE"):
+        abort(400, description="JAX agents only play 2-player games on the BASE map")
+    available = {agent["key"] for agent in _list_jax_agents()}
+    if any(key not in available for key in jax_keys):
+        abort(400, description="That JAX agent is not available on this server")
 
     players = list(map(player_factory, zip(player_keys, Color)))
     catan_map = build_map(map_template)
@@ -269,6 +342,12 @@ def mcts_analysis_endpoint(game_id, state_index):
             status=500,
             mimetype="application/json",
         )
+
+
+@bp.route("/jax-agents", methods=["GET"])
+def list_jax_agents_endpoint():
+    """List the trained JAX agents that can be played on this server."""
+    return jsonify({"agents": _list_jax_agents()})
 
 
 @bp.route("/ppo-agents", methods=["GET"])

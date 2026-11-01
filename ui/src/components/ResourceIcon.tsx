@@ -2,68 +2,72 @@ import "./ResourceIcon.scss";
 
 export type Resource = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
 
-// Colors matched to goal.png reference image
-const RESOURCE_COLORS: Record<Resource, { main: string; dark: string; light: string }> = {
-  WOOD: { main: "#1e5d29", dark: "#004405", light: "#2e7d32" },
-  BRICK: { main: "#e26427", dark: "#b84d1e", light: "#ef7b3a" },
-  SHEEP: { main: "#8bb60e", dark: "#6a8a0b", light: "#a5d63a" },
-  WHEAT: { main: "#f0b615", dark: "#c89211", light: "#f6a03f" },
-  ORE: { main: "#9ba09c", dark: "#7d827f", light: "#b8bbb9" },
+// A small terrain-coloured hexagon, so each resource reads on light and dark backgrounds alike.
+const HEX = "M12 1.5 21.1 6.75V17.25L12 22.5 2.9 17.25V6.75Z";
+
+const FILL: Record<Resource, string> = {
+  WOOD: "#2f7d42",
+  BRICK: "#c8602f",
+  SHEEP: "#92c044",
+  WHEAT: "#ecb62e",
+  ORE: "#7d8993",
+};
+
+const GLYPHS: Record<Resource, React.JSX.Element> = {
+  WOOD: (
+    <>
+      <rect x="11" y="16" width="2" height="3" fill="#f6ecd2" />
+      <path d="M12 4.6 8.5 10h1.6L7 16h10l-3.1-6h1.6Z" fill="#f6ecd2" />
+    </>
+  ),
+  BRICK: (
+    <g fill="#f8e9d6">
+      <rect x="6.2" y="7.4" width="5.4" height="2.9" rx=".5" />
+      <rect x="12.4" y="7.4" width="5.4" height="2.9" rx=".5" />
+      <rect x="9.2" y="11" width="5.6" height="2.9" rx=".5" />
+      <rect x="6.2" y="14.6" width="5.4" height="2.9" rx=".5" />
+      <rect x="12.4" y="14.6" width="5.4" height="2.9" rx=".5" />
+    </g>
+  ),
+  SHEEP: (
+    <>
+      <path d="M8.7 15.2v2.3M11 15.6v2M13.4 15.6v2M15.5 15.2v2.3" stroke="#39332f" strokeWidth="1.1" strokeLinecap="round" />
+      <g fill="#fffdf6">
+        <circle cx="8.5" cy="12.2" r="2.6" />
+        <circle cx="11.4" cy="10.6" r="2.9" />
+        <circle cx="14.3" cy="12" r="2.6" />
+        <circle cx="10.4" cy="14" r="2.5" />
+        <circle cx="13.4" cy="14" r="2.5" />
+      </g>
+      <ellipse cx="17" cy="11" rx="1.9" ry="2.4" fill="#39332f" />
+    </>
+  ),
+  WHEAT: (
+    <>
+      <path d="M12 19V8" stroke="#6b470c" strokeWidth="1.3" strokeLinecap="round" />
+      <g fill="#6b470c">
+        <ellipse cx="12" cy="6.2" rx="1.5" ry="2.3" />
+        <ellipse cx="9.8" cy="9.4" rx="1.4" ry="2.1" transform="rotate(-24 9.8 9.4)" />
+        <ellipse cx="14.2" cy="9.4" rx="1.4" ry="2.1" transform="rotate(24 14.2 9.4)" />
+        <ellipse cx="9.8" cy="13" rx="1.4" ry="2.1" transform="rotate(-24 9.8 13)" />
+        <ellipse cx="14.2" cy="13" rx="1.4" ry="2.1" transform="rotate(24 14.2 13)" />
+      </g>
+    </>
+  ),
+  ORE: (
+    <>
+      <path d="M12 5.4 5.8 17h12.4Z" fill="#46505a" />
+      <path d="M12 5.4 18.2 17h-5l-2.3-5.2Z" fill="#dfe4e8" />
+      <path d="M12 5.4 9.7 9.8 11.3 9l1.3 1.3 1.7-.5Z" fill="#fff" />
+    </>
+  ),
 };
 
 export default function ResourceIcon({ resource, size = 14 }: { resource: Resource; size?: number }) {
-  const s = size;
-  const c = RESOURCE_COLORS[resource];
-  switch (resource) {
-    case "WOOD":
-      return (
-        <svg width={s} height={s} viewBox="0 0 24 24" className="ri ri-wood" aria-hidden>
-          <path d="M12 3 L6 14 H8 L5 19 H19 L16 14 H18 Z" fill={c.main} stroke={c.dark} strokeWidth="1.2" />
-          <rect x="10.5" y="19" width="3" height="3" fill={c.dark} />
-        </svg>
-      );
-    case "BRICK":
-      return (
-        <svg width={s} height={s} viewBox="0 0 24 24" className="ri ri-brick" aria-hidden>
-          <rect x="3" y="5" width="18" height="14" rx="1.5" fill={c.main} stroke={c.dark} strokeWidth="1.2" />
-          <path d="M3 10 H21 M3 15 H21 M9 5 V19 M15 5 V19" stroke="rgba(0,0,0,0.35)" strokeWidth="0.9" />
-          <path d="M3 10 H21 M3 15 H21" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
-        </svg>
-      );
-    case "SHEEP":
-      return (
-        <svg width={s} height={s} viewBox="0 0 24 24" className="ri ri-sheep" aria-hidden>
-          <ellipse cx="12" cy="13" rx="7.5" ry="5.2" fill={c.light} stroke={c.dark} strokeWidth="1.1" />
-          <circle cx="9" cy="11" r="1.1" fill="#1b1b1b" />
-          <circle cx="15" cy="11" r="1.1" fill="#1b1b1b" />
-          <ellipse cx="12" cy="8.5" rx="4.8" ry="3.2" fill={c.main} stroke={c.dark} strokeWidth="1" />
-          <ellipse cx="7.2" cy="9.2" rx="1.6" ry="1.2" fill={c.main} stroke={c.dark} strokeWidth="0.9" />
-          <ellipse cx="16.8" cy="9.2" rx="1.6" ry="1.2" fill={c.main} stroke={c.dark} strokeWidth="0.9" />
-          <path d="M8 16.5 L7 19 H10 Z" fill={c.dark} />
-          <path d="M16 16.5 L14 19 H17 Z" fill={c.dark} />
-        </svg>
-      );
-    case "WHEAT":
-      return (
-        <svg width={s} height={s} viewBox="0 0 24 24" className="ri ri-wheat" aria-hidden>
-          <path d="M12 19 V5" stroke={c.dark} strokeWidth="1.6" strokeLinecap="round" />
-          <ellipse cx="12" cy="5" rx="2.2" ry="2.8" fill={c.main} stroke={c.dark} strokeWidth="1" />
-          <ellipse cx="10" cy="7.5" rx="1.6" ry="1.2" fill={c.light} stroke={c.dark} strokeWidth="0.9" transform="rotate(-18 10 7.5)" />
-          <ellipse cx="14" cy="7.5" rx="1.6" ry="1.2" fill={c.light} stroke={c.dark} strokeWidth="0.9" transform="rotate(18 14 7.5)" />
-          <ellipse cx="10" cy="10.8" rx="1.6" ry="1.2" fill={c.light} stroke={c.dark} strokeWidth="0.9" transform="rotate(-18 10 10.8)" />
-          <ellipse cx="14" cy="10.8" rx="1.6" ry="1.2" fill={c.light} stroke={c.dark} strokeWidth="0.9" transform="rotate(18 14 10.8)" />
-          <path d="M9 16 Q12 15 15 16" stroke={c.dark} strokeWidth="0.9" fill="none" opacity="0.7" />
-        </svg>
-      );
-    case "ORE":
-      return (
-        <svg width={s} height={s} viewBox="0 0 24 24" className="ri ri-ore" aria-hidden>
-          <path d="M4 18 L12 4 L20 18 Z" fill={c.main} stroke={c.dark} strokeWidth="1.2" />
-          <path d="M8.5 11 L12 4 L15.5 11 Z" fill={c.light} stroke={c.dark} strokeWidth="1" />
-          <path d="M7 14 L10 9 L13 12 L16 9 L17.5 14 Z" fill="rgba(0,0,0,0.18)" />
-        </svg>
-      );
-    default:
-      return null;
-  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={`ri ri-${resource.toLowerCase()}`} aria-hidden>
+      <path d={HEX} fill={FILL[resource]} stroke={FILL[resource]} strokeWidth="1.5" strokeLinejoin="round" />
+      {GLYPHS[resource]}
+    </svg>
+  );
 }

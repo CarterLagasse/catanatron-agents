@@ -1,14 +1,10 @@
-import React from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-} from "@mui/material";
-import "./ResourceSelector.scss";
+import { useEffect, useState } from "react";
+import { Button, Dialog } from "@mui/material";
+
 import type { ResourceCard } from "../utils/api.types";
+import { RESOURCES, RESOURCE_NAMES } from "../utils/gameLogic";
+import ResourceIcon from "./ResourceIcon";
+import "./ResourceSelector.scss";
 
 type SelectorOption = ResourceCard | ResourceCard[];
 
@@ -20,117 +16,75 @@ type ResourceSelectorProps = {
   mode: "monopoly" | "yearOfPlenty";
 };
 
-const RESOURCE_ORDER: ResourceCard[] = [
-  "WOOD",
-  "BRICK",
-  "SHEEP",
-  "WHEAT",
-  "ORE",
-];
+export default function ResourceSelector({ open, onClose, options, onSelect, mode }: ResourceSelectorProps) {
+  // Year of Plenty picks one card at a time instead of listing all 15 pairs.
+  const [first, setFirst] = useState<ResourceCard | null>(null);
+  useEffect(() => {
+    if (!open) setFirst(null);
+  }, [open]);
 
-export default function ResourceSelector({
-  open,
-  onClose,
-  options,
-  onSelect,
-  mode,
-}: ResourceSelectorProps) {
-  const isSingleResourceOption = (
-    option: SelectorOption,
-  ): option is ResourceCard => !Array.isArray(option);
+  const choices = options.filter((option): option is ResourceCard[] => Array.isArray(option));
+  const pairs = choices.filter((option) => option.length === 2);
+  const matchingPair = (a: ResourceCard, b: ResourceCard) =>
+    pairs.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
 
-  const sortedOptions = React.useMemo(() => {
-    if (mode === "monopoly") {
-      return RESOURCE_ORDER;
-    }
-
-    const yearOfPlentyOptions = options.filter(
-      (option): option is ResourceCard[] => Array.isArray(option),
-    );
-    const hasDoubleOptions = yearOfPlentyOptions.some(
-      (option) => option.length === 2,
-    );
-    const filteredOptions = hasDoubleOptions
-      ? yearOfPlentyOptions.filter((option) => option.length === 2)
-      : yearOfPlentyOptions;
-
-    return filteredOptions.sort((a: ResourceCard[], b: ResourceCard[]) => {
-      const aFirstResource = a[0];
-      const bFirstResource = b[0];
-      if (aFirstResource !== bFirstResource) {
-        return (
-          RESOURCE_ORDER.indexOf(aFirstResource) -
-          RESOURCE_ORDER.indexOf(bFirstResource)
-        );
-      }
-      if (a.length === 2 && b.length === 2) {
-        return RESOURCE_ORDER.indexOf(a[1]) - RESOURCE_ORDER.indexOf(b[1]);
-      }
-      return a.length === 1 ? 1 : -1;
-    });
-  }, [options, mode]);
-
-  const getResourceSpan = (resource: ResourceCard) => (
-    <span className={`resource-name ${resource.toLowerCase()}`}>
-      {resource}
-    </span>
-  );
-
-  const optionToResourceSpan = (option: SelectorOption) => {
-    if (isSingleResourceOption(option)) {
-      return getResourceSpan(option);
-    }
-    if (option.length === 1) {
-      return (
-        <>
-          {getResourceSpan(option[0])}
-          <span className="plus">x1</span>
-        </>
-      );
-    }
-    return (
-      <>
-        {getResourceSpan(option[0])}
-        <span className="plus">+</span>
-        {getResourceSpan(option[1])}
-      </>
-    );
+  const enabled = (resource: ResourceCard) => {
+    if (mode === "monopoly") return true;
+    if (pairs.length === 0) return choices.some(([only]) => only === resource);
+    if (first) return !!matchingPair(first, resource);
+    return pairs.some((pair) => pair.includes(resource));
   };
 
+  const choose = (resource: ResourceCard) => {
+    if (mode === "monopoly") {
+      onSelect(resource);
+    } else if (pairs.length === 0) {
+      onSelect([resource]);
+    } else if (first) {
+      const pair = matchingPair(first, resource);
+      if (pair) onSelect(pair);
+    } else {
+      setFirst(resource);
+    }
+  };
+
+  const title = mode === "monopoly" ? "Monopoly" : "Year of Plenty";
+  const prompt =
+    mode === "monopoly"
+      ? "Take every card of one resource from the other players."
+      : pairs.length === 0
+        ? "The bank is nearly empty, so you can take 1 card."
+        : first
+          ? `You'll get ${RESOURCE_NAMES[first]}. Pick your second card.`
+          : "Pick your first card from the bank.";
+
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      className="resource-selector"
-      maxWidth="xs"
-      fullWidth
-    >
-      <DialogTitle>
-        {mode === "monopoly"
-          ? "Select Resource to Monopolize"
-          : "Select Resources for Year of Plenty"}
-      </DialogTitle>
-      <DialogContent>
-        <div className="resource-grid">
-          {sortedOptions.map((option, index) => (
-            <Button
-              key={index}
-              variant="contained"
-              className="resource-button"
-              onClick={() => onSelect(option)}
-            >
-              <Typography variant="body2">
-                {optionToResourceSpan(option)}
-              </Typography>
-            </Button>
-          ))}
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} className="cancel-button">
+    <Dialog open={open} onClose={onClose} className="resource-selector game-dialog" maxWidth="xs" fullWidth>
+      <h2>{title}</h2>
+      <p>{prompt}</p>
+      <div className="resource-grid">
+        {RESOURCES.map((resource) => (
+          <button
+            key={resource}
+            className="resource-button"
+            disabled={!enabled(resource)}
+            onClick={() => choose(resource)}
+          >
+            <ResourceIcon resource={resource} size={38} />
+            <span>{RESOURCE_NAMES[resource]}</span>
+          </button>
+        ))}
+      </div>
+      <div className="dialog-actions">
+        {first && (
+          <Button color="inherit" onClick={() => setFirst(null)}>
+            Start over
+          </Button>
+        )}
+        <Button color="inherit" onClick={onClose}>
           Cancel
         </Button>
-      </DialogActions>
+      </div>
     </Dialog>
   );
 }

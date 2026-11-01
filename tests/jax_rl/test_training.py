@@ -1,3 +1,6 @@
+import json
+import pickle
+
 import numpy as np
 import pytest
 
@@ -6,7 +9,13 @@ import jax.numpy as jnp  # noqa: E402
 
 from catanatron.jax_rl import checkpoint  # noqa: E402
 from catanatron.jax_rl.env import CatanEnv  # noqa: E402
-from catanatron.jax_rl.jax_player import JaxPlayer  # noqa: E402
+from catanatron.jax_rl.jax_player import (  # noqa: E402
+    JaxPlayer,
+    _play_games,
+    play_match,
+    summarize,
+    wilson_interval,
+)
 from catanatron.jax_rl.network import GraphPolicy  # noqa: E402
 from catanatron.jax_rl.obs import encode_current  # noqa: E402
 from catanatron.jax_rl.ppo import PPOConfig, Trainer, Transition, train  # noqa: E402
@@ -16,7 +25,9 @@ from catanatron.jax_rl.psro import (  # noqa: E402
     solve_meta,
 )
 from catanatron.jax_rl.psro import train as train_psro  # noqa: E402
+from catanatron.jax_rl.tournament import paired_difference, verdict  # noqa: E402
 from catanatron.game import Game  # noqa: E402
+from catanatron.models.map import build_map  # noqa: E402
 from catanatron.models.player import Color, RandomPlayer  # noqa: E402
 
 TINY = dict(
@@ -332,6 +343,146 @@ def test_psro_includes_init_agent_and_resumes(tmp_path):
     third = PSROConfig(**{**config.__dict__, "iterations": 5})
     stopped = train_psro(third, tmp_path, log=lambda _: None, resume=True, max_hours=0.0)
     assert stopped.names == second.names
+
+
+def test_replace_file_waits_out_a_locked_target(tmp_path, monkeypatch):
+    source, target = tmp_path / "new", tmp_path / "old"
+    source.write_text("new")
+    target.write_text("old")
+    real_replace, calls = checkpoint.os.replace, []
+
+    def locked_twice(a, b):
+        calls.append(a)
+        if len(calls) <= 2:
+            raise PermissionError("in use")
+        real_replace(a, b)
+
+    monkeypatch.setattr(checkpoint.os, "replace", locked_twice)
+    monkeypatch.setattr(checkpoint.time, "sleep", lambda _: None)
+    checkpoint.replace_file(source, target)
+    assert target.read_text() == "new" and len(calls) == 3
+
+    source.write_text("new")
+    calls.clear()
+    monkeypatch.setattr(checkpoint.os, "replace", lambda a, b: (_ for _ in ()).throw(PermissionError()))
+    with pytest.raises(PermissionError):
+        checkpoint.replace_file(source, target, attempts=2)
+
+
+def test_wilson_interval_is_honest_at_the_extremes():
+    low, high = wilson_interval(402, 402)
+    assert 0.98 < low < 1.0 and high == 1.0
+    low, high = wilson_interval(0, 30)
+    assert low == 0.0 and 0.1 < high < 0.13
+    low, high = wilson_interval(50, 100)
+    assert low == pytest.approx(0.404, abs=0.001) and high == pytest.approx(0.596, abs=0.001)
+
+
+def _records(results):
+    return [
+        {"seed": seed, "result": result, "seat": seed % 2, "vps": 10, "member": 0}
+        for seed, result in enumerate(results)
+    ]
+
+
+def test_summary_and_paired_difference():
+    a = _records(["win", "win", "loss", "draw"])
+    summary = summarize(a)
+    assert (summary["wins"], summary["losses"], summary["draws"]) == (2, 1, 1)
+    assert summary["seat0_win_rate"] == 0.5 and summary["seat1_win_rate"] == 0.5
+
+    assert paired_difference(a, a)["difference"] == 0.0
+    b = _records(["loss", "win", "loss", "loss"])
+    difference = paired_difference(a, b)
+    assert difference["difference"] == pytest.approx(0.25)
+    assert difference["ci_low"] < 0.25 < difference["ci_high"]
+    # Only seeds both agents played count.
+    assert paired_difference(a, b[:2])["games"] == 2
+    assert verdict(0.51, 0.6) == "better"
+    assert verdict(0.4, 0.49) == "worse"
+    assert verdict(0.49, 0.51) == "not separated"
+
+
+def test_engine_match_is_reproducible_and_resumes(tmp_path):
+    params = GraphPolicy(CatanEnv("MINI"), 8, 1).init(jax.random.PRNGKey(0))
+    path = tmp_path / "agent.npz"
+    checkpoint.save_params(path, params, 8, 1, "MINI")
+    seeds = [11, 12]
+    job = (str(path), False, "R", seeds, "MINI")
+    first = _play_games(job)
+    assert first == _play_games(job)
+    assert [r["seed"] for r in first] == seeds
+
+    # A saved game is not replayed, so only the missing seed reaches the pool.
+    records_path = tmp_path / "records.jsonl"
+    records_path.write_text(json.dumps(first[0]) + "\n")
+
+    class Pool:
+        jobs = []
+
+        def imap_unordered(self, fn, jobs):
+            self.jobs = jobs
+            return [fn(job) for job in jobs]
+
+    pool = Pool()
+    records = play_match(
+        str(path), "R", 2, pool, map_type="MINI", seed=11, records_path=records_path
+    )
+    assert [job[3] for job in pool.jobs] == [[12]]
+    assert records == first
+    assert len(records_path.read_text().splitlines()) == 2
+
+
+def test_jax_player_survives_pickling_mid_game(tmp_path):
+    """The web server stores players by pickle, and a PSRO mixture must keep the
+    member it drew for the game."""
+    params = GraphPolicy(CatanEnv("MINI"), 8, 1).init(jax.random.PRNGKey(0))
+    path = tmp_path / "agent.npz"
+    checkpoint.save_params(path, params, 8, 1, "MINI")
+
+    player = JaxPlayer(Color.RED, path, greedy=True)
+    player._game_id, player._active = "game", 0
+    restored = pickle.loads(pickle.dumps(player))
+    assert (restored.color, restored.path, restored.greedy) == (Color.RED, str(path), True)
+    assert (restored._game_id, restored._active) == ("game", 0)
+    assert len(pickle.dumps(player)) < 2000, "the network must not be stored per move"
+
+    game = Game([restored, RandomPlayer(Color.BLUE)], catan_map=build_map("MINI"))
+    assert game.play() in (Color.RED, Color.BLUE, None)
+
+
+def test_jax_player_finishes_games_with_ui_settings(tmp_path):
+    """The UI lets people change settings the agents never trained on."""
+    params = GraphPolicy(CatanEnv("BASE"), 8, 1).init(jax.random.PRNGKey(0))
+    path = tmp_path / "agent.npz"
+    checkpoint.save_params(path, params, 8, 1, "BASE")
+    game = Game(
+        [RandomPlayer(Color.RED), JaxPlayer(Color.BLUE, path)],
+        seed=3,
+        vps_to_win=15,
+        discard_limit=9,
+        friendly_robber=True,
+    )
+    game.play()
+    assert game.state.num_turns > 0
+
+
+def test_bot_control_agent_plays_engine_games():
+    records = _play_games(("bot:R", False, "R", [1], "MINI"))
+    assert records[0]["result"] in ("win", "loss", "draw")
+
+
+def test_ppo_keeps_a_snapshot_per_evaluation(tmp_path):
+    config = PPOConfig(
+        map_type="MINI", num_envs=8, rollout_ticks=8, pool_fraction=0.0, scripted_fraction=0.0,
+        hidden=8, rounds=1, num_minibatches=2, total_timesteps=8 * 8 * 2, eval_every=1,
+        eval_envs=2, eval_ticks=8,
+    )
+    train(config, tmp_path, log=lambda _: None)
+    assert sorted(p.name for p in (tmp_path / "snapshots").iterdir()) == [
+        "it_00001.npz",
+        "it_00002.npz",
+    ]
 
 
 def test_cli_parses_jax_player(tmp_path):
