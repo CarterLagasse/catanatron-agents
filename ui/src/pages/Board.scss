@@ -124,26 +124,42 @@
     animation: recent-road 0.9s ease-in-out 2;
   }
 }
+// A dark mitered bar with a bevelled one inset on it, lit from above whichever way the edge runs.
 .road {
   position: absolute;
-  width: 100%;
-  height: 100%;
-  // V/mitered ends - outline via box-shadow (clip-path clips border)
-  clip-path: polygon(6% 0%, 94% 0%, 100% 50%, 94% 100%, 6% 100%, 0% 50%);
-  filter: drop-shadow(0 0 0.8px rgba(0,0,0,0.62));
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.40),
-    inset 0 -0.8px 0 rgba(0,0,0,0.18);
-  background-color: var(--piece);
-  background-image: linear-gradient(
-    to bottom,
-    rgba(255,255,255,0.22) 0%,
-    rgba(255,255,255,0) 48%,
-    rgba(0,0,0,0.12) 100%
-  );
-  transition: transform 140ms ease, filter 140ms ease;
+  inset: 0;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+  transition: filter 140ms ease;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    clip-path: polygon(7% 0%, 93% 0%, 100% 50%, 93% 100%, 7% 100%, 0% 50%);
+  }
+  &::before {
+    inset: 0;
+    background: #1a232c;
+  }
+  &::after {
+    inset: 1.5px;
+    background: linear-gradient(
+      to bottom,
+      var(--piece-light) 0 30%,
+      var(--piece) 30% 68%,
+      var(--piece-dark) 68%
+    );
+    transform: scaleY(var(--road-light, 1));
+  }
 }
-.edge:hover .road { filter: drop-shadow(0 0 0.8px rgba(0,0,0,0.62)) brightness(1.08); transform: scaleY(1.06); }
+.edge.EAST,
+.edge.SOUTHEAST,
+.edge.SOUTHWEST {
+  --road-light: -1;
+}
+.edge:hover .road {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4)) brightness(1.08);
+}
 
 @keyframes recent-road {
   50% { filter: drop-shadow(0 0 6px #fff) brightness(1.2); }
