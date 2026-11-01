@@ -152,12 +152,13 @@
     align-items: center;
     gap: 4px;
   }
-  .dev-glyph {
-    width: 10px;
-    height: 14px;
-    border-radius: 2px;
-    background: linear-gradient(160deg, #8d6bd8, #5a3ea8);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+  .stat-art {
+    display: inline-flex;
+    svg {
+      display: block;
+      width: 19px;
+      height: 19px;
+    }
   }
 }
 

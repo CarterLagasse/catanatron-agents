@@ -47,3 +47,16 @@ export function DevCardArt() {
     </svg>
   );
 }
+
+export function CardsArt() {
+  return (
+    <svg viewBox="0 0 28 28" aria-hidden>
+      <g stroke="#1a232c" strokeWidth="1.3">
+        <rect x="8.5" y="5" width="11" height="17" rx="2" transform="rotate(-24 14 24)" fill="#2f7d42" />
+        <rect x="8.5" y="5" width="11" height="17" rx="2" fill="#c8602f" />
+        <rect x="8.5" y="5" width="11" height="17" rx="2" transform="rotate(24 14 24)" fill="#fff6df" />
+      </g>
+      <path transform="rotate(24 14 24)" d="M14 9l3.5 2v4l-3.5 2-3.5-2v-4Z" fill="#ecb62e" />
+    </svg>
+  );
+}

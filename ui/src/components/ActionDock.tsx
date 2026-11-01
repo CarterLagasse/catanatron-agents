@@ -1,9 +1,8 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState, type ElementType } from "react";
 import cn from "classnames";
 import { Popover, Tooltip } from "@mui/material";
 import CasinoIcon from "@mui/icons-material/Casino";
 import HomeIcon from "@mui/icons-material/Home";
-import RouteIcon from "@mui/icons-material/Route";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
@@ -213,7 +212,7 @@ export default function ActionDock({ isBotThinking }: { isBotThinking: boolean }
     return `${label}: no legal spot right now`;
   };
 
-  let primary: { label: string; Icon: typeof CasinoIcon; onClick?: () => void; hint?: string };
+  let primary: { label: string; Icon: ElementType; onClick?: () => void; hint?: string };
   if (gs.winning_color) {
     primary = { label: "Game over", Icon: SkipNextIcon };
   } else if (!humanTurn) {
@@ -225,7 +224,14 @@ export default function ActionDock({ isBotThinking }: { isBotThinking: boolean }
   } else if (gs.is_initial_build_phase) {
     primary = { label: "Place piece", Icon: HomeIcon };
   } else if (isFreeRoadMode(gs)) {
-    primary = { label: "Place road", Icon: RouteIcon };
+    primary = {
+      label: "Place road",
+      Icon: () => (
+        <span className={cn("build-art", "piece-colors", human.toLowerCase())}>
+          <RoadArt />
+        </span>
+      ),
+    };
   } else if (canRoll) {
     primary = { label: "Roll", Icon: CasinoIcon, onClick: () => act([human, "ROLL", null]), hint: "R" };
   } else {

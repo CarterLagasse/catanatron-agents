@@ -35,8 +35,7 @@
       b {
         color: #ff8a7a;
       }
-      svg,
-      .dev-deck {
+      svg {
         opacity: 0.35;
         filter: grayscale(0.8);
       }
@@ -47,13 +46,9 @@
     border-left: 1px solid var(--line);
     min-width: 34px;
   }
-  .dev-deck {
+  .bank-dev svg {
     display: block;
-    width: 17px;
-    height: 23px;
-    border-radius: 3px;
-    background: linear-gradient(160deg, #8d6bd8, #5a3ea8);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 2px 1px 0 #3f2a7d;
+    width: 24px;
+    height: 24px;
   }
 }

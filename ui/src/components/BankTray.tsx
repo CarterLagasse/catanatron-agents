@@ -3,6 +3,7 @@ import { Tooltip } from "@mui/material";
 
 import type { GameState } from "../utils/api.types";
 import { RESOURCES, RESOURCE_NAMES } from "../utils/gameLogic";
+import { DevCardArt } from "./PieceArt";
 import ResourceIcon from "./ResourceIcon";
 import "./BankTray.scss";
 
@@ -27,7 +28,7 @@ export default function BankTray({ gameState: gs }: { gameState: GameState }) {
         })}
         <Tooltip arrow title={`${gs.dev_cards_left} development cards left to buy`}>
           <li className={cn("bank-dev", { out: gs.dev_cards_left === 0 })}>
-            <span className="dev-deck" aria-hidden />
+            <DevCardArt />
             <b>{gs.dev_cards_left}</b>
           </li>
         </Tooltip>

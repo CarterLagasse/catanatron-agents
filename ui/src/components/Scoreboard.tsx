@@ -1,13 +1,12 @@
 import cn from "classnames";
 import { Tooltip } from "@mui/material";
 import MilitaryTechIcon from "@mui/icons-material/MilitaryTech";
-import RouteIcon from "@mui/icons-material/Route";
-import StyleIcon from "@mui/icons-material/Style";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 import type { Color, GameState } from "../utils/api.types";
 import { cardCount, devCardCount, DEV_CARDS, hand, RESOURCES } from "../utils/gameLogic";
 import { getHumanColor, playerKey } from "../utils/stateUtils";
+import { CardsArt, DevCardArt, RoadArt } from "./PieceArt";
 import ResourceIcon from "./ResourceIcon";
 import "./Scoreboard.scss";
 
@@ -99,13 +98,13 @@ export default function Scoreboard({
             </div>
             <div className="stats">
               <Stat
-                icon={<StyleIcon fontSize="inherit" />}
+                icon={<span className="stat-art"><CardsArt /></span>}
                 value={cards}
                 caption="Cards"
                 label={overLimit ? `${cards} cards: over the discard limit of ${gs.discard_limit}` : `${cards} resource cards`}
                 active={overLimit}
               />
-              <Stat icon={<span className="dev-glyph" />} value={devCards} caption="Dev" label={`${devCards} development cards`} />
+              <Stat icon={<span className="stat-art"><DevCardArt /></span>} value={devCards} caption="Dev" label={`${devCards} development cards`} />
               <Stat
                 icon={<MilitaryTechIcon fontSize="inherit" />}
                 value={state[`${key}_PLAYED_KNIGHT`] ?? 0}
@@ -114,7 +113,7 @@ export default function Scoreboard({
                 active={!!state[`${key}_HAS_ARMY`]}
               />
               <Stat
-                icon={<RouteIcon fontSize="inherit" />}
+                icon={<span className={cn("stat-art", "piece-colors", color.toLowerCase())}><RoadArt /></span>}
                 value={state[`${key}_LONGEST_ROAD_LENGTH`] ?? 0}
                 caption={state[`${key}_HAS_ROAD`] ? "Top road" : "Road"}
                 label={state[`${key}_HAS_ROAD`] ? "Longest Road: worth 2 points" : "Longest road length"}
