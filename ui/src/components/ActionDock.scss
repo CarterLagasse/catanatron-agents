@@ -170,11 +170,26 @@
 .build-title {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   font-size: 0.8rem;
   svg {
     font-size: 1rem;
   }
+}
+
+.build-art {
+  display: inline-flex;
+  svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+  }
+}
+
+.build-button:disabled .build-art svg {
+  opacity: 0.78;
+  filter: saturate(0.7);
 }
 
 .build-cost {
@@ -352,15 +367,18 @@
     min-width: 0;
   }
   .build-button {
-    height: 50px;
+    height: 66px;
     padding: 3px 1px;
+    gap: 2px;
   }
   .build-title {
+    flex-direction: column;
     font-size: 0.66rem;
-    gap: 2px;
-    svg {
-      display: none;
-    }
+    gap: 1px;
+  }
+  .build-art svg {
+    width: 20px;
+    height: 20px;
   }
   .build-cost {
     padding: 0 1px;

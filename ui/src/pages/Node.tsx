@@ -1,5 +1,6 @@
 import cn from "classnames";
 
+import { CityArt, SettlementArt } from "../components/PieceArt";
 import { tilePixelVector, getNodeDelta, SQRT3, type CubeCoordinate } from "../utils/coordinates";
 import type { Building, Color, Direction } from "../utils/api.types";
 
@@ -9,26 +10,11 @@ type BuildingProps<T = Color | null> = {
 };
 
 function Building({ building, color }: BuildingProps) {
-  const className = cn(color?.toLowerCase(), "piece-colors", building === "CITY" ? "city" : "settlement");
-  if (building === "CITY") {
-    return (
-      <svg viewBox="0 0 36 32" className={className} aria-hidden>
-        <path className="piece-outline" d="M2.5 29V11.5L8.5 3h5l6 8.5V13H29l4.5 6v10Z" />
-        <path className="piece-face" d="M19.5 19h14v10h-14Z" />
-        <path className="piece-roof" d="M19.5 19V13H29l4.5 6Z" />
-        <path className="piece-side" d="M14.5 11.5h5V29h-5Z" />
-        <path className="piece-face" d="M2.5 11.5 8.5 3l6 8.5V29h-12Z" />
-        <path className="piece-roof" d="M8.5 3h5l6 8.5h-5Z" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 28 28" className={className} aria-hidden>
-      <path className="piece-outline" d="M3.5 25V14L9.5 6.5h9L24.5 14v11Z" />
-      <path className="piece-side" d="M15.5 14h9v11h-9Z" />
-      <path className="piece-face" d="M3.5 14 9.5 6.5 15.5 14v11h-12Z" />
-      <path className="piece-roof" d="M9.5 6.5h9l6 7.5H15.5Z" />
-    </svg>
+  const colors = cn(color?.toLowerCase(), "piece-colors");
+  return building === "CITY" ? (
+    <CityArt className={cn(colors, "city")} />
+  ) : (
+    <SettlementArt className={cn(colors, "settlement")} />
   );
 }
 

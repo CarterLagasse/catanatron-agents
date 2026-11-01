@@ -105,9 +105,14 @@
   gap: 2px;
 }
 
+.log-tail {
+  white-space: nowrap;
+}
+
 .log-cards {
   display: inline-flex;
   gap: 1px;
+  vertical-align: -3px;
 }
 
 .log-gain {

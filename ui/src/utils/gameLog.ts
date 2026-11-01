@@ -40,19 +40,6 @@ function describe(
       const card = (action[2] ?? result) as ResourceCard | null;
       return { text: `${who} discarded`, resources: card ? [card] : undefined };
     }
-    case "BUY_DEVELOPMENT_CARD":
-      // The card drawn is in the record, but is secret unless it's the player's own.
-      return {
-        text: humanInvolved() && result
-          ? `${who} bought a ${String(result).replaceAll("_", " ").toLowerCase()} card`
-          : `${who} bought a development card`,
-      };
-    case "BUILD_SETTLEMENT":
-      return { text: `${who} built a settlement` };
-    case "BUILD_CITY":
-      return { text: `${who} upgraded to a city` };
-    case "BUILD_ROAD":
-      return { text: `${who} built a road` };
     case "PLAY_KNIGHT_CARD":
       return { text: `${who} played a knight` };
     case "PLAY_ROAD_BUILDING":
@@ -85,6 +72,32 @@ function describe(
   }
 }
 
+/** A move that joins the turn's list of things built or bought, if it is one. */
+function listedMove(gs: GameState, [action, result]: GameActionRecord) {
+  switch (action[1]) {
+    case "BUILD_ROAD":
+      return { verb: "built", one: "road", many: "roads" };
+    case "BUILD_SETTLEMENT":
+      return { verb: "built", one: "settlement", many: "settlements" };
+    case "BUILD_CITY":
+      return { verb: "built", one: "city", many: "cities" };
+    case "BUY_DEVELOPMENT_CARD": {
+      // The card drawn is in the record, but is secret unless it's the player's own.
+      const card = !gs.bot_colors.includes(action[0]) && result
+        ? `${String(result).replaceAll("_", " ").toLowerCase()} card`
+        : "development card";
+      return { verb: "bought", one: card, many: `${card}s` };
+    }
+    default:
+      return null;
+  }
+}
+
+function listText(items: Map<string, { many: string; count: number }>) {
+  const parts = [...items].map(([one, { many, count }]) => (count === 1 ? `a ${one}` : `${count} ${many}`));
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+}
+
 function gainsList(gains: RollGains | undefined) {
   if (!gains) return undefined;
   const list = Object.entries(gains).map(([color, cards]) => ({
@@ -105,6 +118,7 @@ export function buildLog(
   const turns: LogTurn[] = [];
   let current: LogTurn | null = null;
   let turnNumber = 0;
+  let lists = new Map<string, { entry: LogEntry; items: Map<string, { many: string; count: number }> }>();
   for (let index = 0; index < gs.action_records.length; index += 1) {
     const record = gs.action_records[index];
     const action = record[0];
@@ -123,6 +137,7 @@ export function buildLog(
         entries: [],
       };
       turns.push(current);
+      lists = new Map();
     }
     if (action[1] === "END_TURN") {
       current = null;
@@ -135,6 +150,19 @@ export function buildLog(
         dice,
         gains: gainsList(gainsByRecord[index]),
       });
+    } else if (listedMove(gs, record)) {
+      const { verb, one, many } = listedMove(gs, record)!;
+      const key = `${color}:${verb}`;
+      let list = lists.get(key);
+      if (!list) {
+        list = { entry: { index, color, text: "" }, items: new Map() };
+        lists.set(key, list);
+        current.entries.push(list.entry);
+      }
+      const item = list.items.get(one) ?? { many, count: 0 };
+      item.count += 1;
+      list.items.set(one, item);
+      list.entry.text = `${name(color)} ${verb} ${listText(list.items)}`;
     } else {
       const entry = describe(gs, record, name);
       const previous = current.entries[current.entries.length - 1];

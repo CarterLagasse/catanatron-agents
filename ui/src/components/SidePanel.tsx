@@ -45,14 +45,23 @@ function GameLog({
                     <Die value={entry.dice[1]} size={16} />
                   </span>
                 )}
-                <span>{entry.text}</span>
-                {entry.resources && (
-                  <span className="log-cards">
-                    {entry.resources.map((resource, i) => (
-                      <ResourceIcon key={i} resource={resource} size={15} />
-                    ))}
-                  </span>
-                )}
+                <span>
+                  {entry.resources ? (
+                    <>
+                      {entry.text.slice(0, entry.text.lastIndexOf(" ") + 1)}
+                      <span className="log-tail">
+                        {entry.text.slice(entry.text.lastIndexOf(" ") + 1)}{" "}
+                        <span className="log-cards">
+                          {entry.resources.map((resource, i) => (
+                            <ResourceIcon key={i} resource={resource} size={15} />
+                          ))}
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    entry.text
+                  )}
+                </span>
                 {entry.gains?.map(({ color, resources }) => (
                   <span key={color} className="log-gain">
                     {name(color)} +

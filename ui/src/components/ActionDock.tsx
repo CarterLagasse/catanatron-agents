@@ -3,9 +3,7 @@ import cn from "classnames";
 import { Popover, Tooltip } from "@mui/material";
 import CasinoIcon from "@mui/icons-material/Casino";
 import HomeIcon from "@mui/icons-material/Home";
-import LocationCityIcon from "@mui/icons-material/LocationCity";
 import RouteIcon from "@mui/icons-material/Route";
-import StyleIcon from "@mui/icons-material/Style";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
@@ -35,15 +33,16 @@ import {
 } from "../utils/gameLogic";
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import DiscardPlannerDialog from "./DiscardPlannerDialog";
+import { CityArt, DevCardArt, RoadArt, SettlementArt } from "./PieceArt";
 import ResourceIcon from "./ResourceIcon";
 import ResourceSelector from "./ResourceSelector";
 import "./ActionDock.scss";
 
 const BUILDS = [
-  { type: "BUILD_ROAD", mode: "ROAD", label: "Road", Icon: RouteIcon, keyHint: "1" },
-  { type: "BUILD_SETTLEMENT", mode: "SETTLEMENT", label: "Settlement", Icon: HomeIcon, keyHint: "2" },
-  { type: "BUILD_CITY", mode: "CITY", label: "City", Icon: LocationCityIcon, keyHint: "3" },
-  { type: "BUY_DEVELOPMENT_CARD", mode: null, label: "Dev card", Icon: StyleIcon, keyHint: "4" },
+  { type: "BUILD_ROAD", mode: "ROAD", label: "Road", Icon: RoadArt, keyHint: "1" },
+  { type: "BUILD_SETTLEMENT", mode: "SETTLEMENT", label: "Settlement", Icon: SettlementArt, keyHint: "2" },
+  { type: "BUILD_CITY", mode: "CITY", label: "City", Icon: CityArt, keyHint: "3" },
+  { type: "BUY_DEVELOPMENT_CARD", mode: null, label: "Dev card", Icon: DevCardArt, keyHint: "4" },
 ] as const;
 
 const PLAY_ACTIONS: Record<DevelopmentCard, GameAction[1]> = {
@@ -301,7 +300,9 @@ export default function ActionDock({ isBotThinking }: { isBotThinking: boolean }
                   onClick={() => pressBuild(build)}
                 >
                   <span className="build-title">
-                    <build.Icon fontSize="inherit" />
+                    <span className={cn("build-art", "piece-colors", human.toLowerCase())}>
+                      <build.Icon />
+                    </span>
                     {build.label}
                   </span>
                   <span className="build-cost">

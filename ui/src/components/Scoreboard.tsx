@@ -70,7 +70,7 @@ export default function Scoreboard({
               <span className="player-hex" aria-hidden>
                 <svg viewBox="0 0 24 24">
                   <path d="M12 1.5 21.1 6.75V17.25L12 22.5 2.9 17.25V6.75Z" />
-                  <path d="M7 18v-6l5-4.6 5 4.6v6Z" className="player-house" />
+                  <path d="M7 17.1v-6l5-4.6 5 4.6v6Z" className="player-house" />
                 </svg>
               </span>
               <span className="player-title">

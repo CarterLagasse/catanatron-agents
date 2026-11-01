@@ -199,6 +199,29 @@ describe("buildLog", () => {
     expect(turns[0].entries).toHaveLength(2);
   });
 
+  test("lists everything built or bought in a turn on one line each", () => {
+    const gs = gameState({
+      action_records: [
+        [["RED", "ROLL", null], [3, 5]],
+        [["RED", "BUILD_ROAD", [1, 2]], null],
+        [["RED", "BUY_DEVELOPMENT_CARD", null], "KNIGHT"],
+        [["RED", "BUILD_ROAD", [2, 3]], null],
+        [["RED", "BUILD_SETTLEMENT", 3], null],
+        [["RED", "BUILD_CITY", 5], null],
+        [["RED", "BUY_DEVELOPMENT_CARD", null], "KNIGHT"],
+        [["RED", "END_TURN", null], null],
+        [["BLUE", "ROLL", null], [1, 1]],
+        [["BLUE", "BUILD_ROAD", [4, 5]], null],
+      ] as any,
+    });
+    const turns = buildLog(gs, name);
+    expect(turns[0].entries.slice(1).map((entry) => entry.text)).toEqual([
+      "You built 2 roads, a settlement and a city",
+      "You bought 2 knight cards",
+    ]);
+    expect(turns[1].entries[1].text).toBe("PSRO - Hard built a road");
+  });
+
   test("puts one player's discards on a single line", () => {
     const gs = gameState({
       action_records: [
