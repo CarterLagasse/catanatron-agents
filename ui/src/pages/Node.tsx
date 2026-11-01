@@ -12,15 +12,13 @@ function Building({ building, color }: BuildingProps) {
   const className = cn(color?.toLowerCase(), "piece-colors", building === "CITY" ? "city" : "settlement");
   if (building === "CITY") {
     return (
-      <svg viewBox="0 0 36 34" className={className} aria-hidden>
-        <path className="piece-outline" d="M3 31V12L8 2l5 10v7l7-8h8l6 8v12Z" />
-        <path className="piece-side" d="M27 19h7v12h-7Z" />
-        <path className="piece-face" d="M13 19l7-8 7 8v12H13Z" />
-        <path className="piece-roof" d="M20 11h8l6 8h-7Z" />
-        <path className="piece-face" d="M3 12h10v19H3Z" />
-        <path className="piece-side" d="M9.5 12H13v19H9.5Z" />
-        <path className="piece-roof" d="M3 12 8 2v10Z" />
-        <path className="piece-side" d="M8 2l5 10H8Z" />
+      <svg viewBox="0 0 36 32" className={className} aria-hidden>
+        <path className="piece-outline" d="M2.5 29V11.5L8.5 3h5l6 8.5V13H29l4.5 6v10Z" />
+        <path className="piece-face" d="M19.5 19h14v10h-14Z" />
+        <path className="piece-roof" d="M19.5 19V13H29l4.5 6Z" />
+        <path className="piece-side" d="M14.5 11.5h5V29h-5Z" />
+        <path className="piece-face" d="M2.5 11.5 8.5 3l6 8.5V29h-12Z" />
+        <path className="piece-roof" d="M8.5 3h5l6 8.5h-5Z" />
       </svg>
     );
   }

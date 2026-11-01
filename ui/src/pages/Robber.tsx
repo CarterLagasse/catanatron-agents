@@ -30,7 +30,6 @@ export default function Robber({ center, size, coordinate, isDesert }: RobberPro
         <g stroke="#14181d" strokeWidth="1.5" strokeLinejoin="round">
           <ellipse cx="20" cy="46" rx="13.5" ry="5.2" fill="#2c323a" />
           <path d="M12 45C13.5 35 16 29 17 24h6c1 5 3.5 11 5 21 0 3-16 3-16 0Z" fill="#4c555f" />
-          <ellipse cx="20" cy="24" rx="7.6" ry="2.8" fill="#6a7480" />
           <circle cx="20" cy="14" r="9.4" fill="#4c555f" />
         </g>
         <path d="M23 25c1 5 3.6 11 5 20 0 1.6-4.4 2.5-8 2.5C24 40 23.4 31 23 25Z" fill="#343b44" />

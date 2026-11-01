@@ -96,7 +96,7 @@ function gainsList(gains: RollGains | undefined) {
   return list.length > 0 ? list : undefined;
 }
 
-/** Turns, newest first, each with its moves in the order they happened. */
+/** Turns, oldest first, each with its moves in the order they happened. */
 export function buildLog(
   gs: GameState,
   name: (color: Color) => string,
@@ -136,7 +136,17 @@ export function buildLog(
         gains: gainsList(gainsByRecord[index]),
       });
     } else {
-      current.entries.push({ index, color, ...describe(gs, record, name) });
+      const entry = describe(gs, record, name);
+      const previous = current.entries[current.entries.length - 1];
+      if (
+        action[1] === "DISCARD_RESOURCE" &&
+        previous?.color === color &&
+        gs.action_records[previous.index][0][1] === "DISCARD_RESOURCE"
+      ) {
+        previous.resources = [...(previous.resources ?? []), ...(entry.resources ?? [])];
+      } else {
+        current.entries.push({ index, color, ...entry });
+      }
     }
   }
   return turns;

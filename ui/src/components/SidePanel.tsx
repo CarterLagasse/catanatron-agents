@@ -46,9 +46,13 @@ function GameLog({
                   </span>
                 )}
                 <span>{entry.text}</span>
-                {entry.resources?.map((resource, i) => (
-                  <ResourceIcon key={i} resource={resource} size={15} />
-                ))}
+                {entry.resources && (
+                  <span className="log-cards">
+                    {entry.resources.map((resource, i) => (
+                      <ResourceIcon key={i} resource={resource} size={15} />
+                    ))}
+                  </span>
+                )}
                 {entry.gains?.map(({ color, resources }) => (
                   <span key={color} className="log-gain">
                     {name(color)} +

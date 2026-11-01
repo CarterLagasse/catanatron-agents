@@ -199,6 +199,20 @@ describe("buildLog", () => {
     expect(turns[0].entries).toHaveLength(2);
   });
 
+  test("puts one player's discards on a single line", () => {
+    const gs = gameState({
+      action_records: [
+        [["RED", "ROLL", null], [3, 4]],
+        [["BLUE", "DISCARD_RESOURCE", "ORE"], null],
+        [["BLUE", "DISCARD_RESOURCE", "ORE"], null],
+        [["RED", "DISCARD_RESOURCE", "WOOD"], null],
+        [["RED", "DISCARD_RESOURCE", "BRICK"], null],
+      ] as any,
+    });
+    const entries = buildLog(gs, name)[0].entries;
+    expect(entries.map((entry) => entry.resources)).toEqual([undefined, ["ORE", "ORE"], ["WOOD", "BRICK"]]);
+  });
+
   test("doesn't reveal which development card a bot drew", () => {
     const gs = gameState({
       action_records: [
