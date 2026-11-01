@@ -71,6 +71,8 @@ jobs:
         run: |
           coverage run --source=catanatron -m pytest tests/
       - name: Coveralls
+        # Only a coverage report: an upload problem shouldn't fail the build.
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

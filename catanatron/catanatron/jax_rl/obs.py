@@ -37,8 +37,18 @@ NODE_FEATURES = 7 + NUM_RESOURCES + 1 + NUM_RESOURCES + 1
 EDGE_FEATURES = 3
 TILE_FEATURES = NUM_RESOURCES + 1 + 3
 GLOBAL_FEATURES = (
-    NUM_PROMPTS + 7 + NUM_RESOURCES + 1 + NUM_DEV_TYPES + (NUM_DEV_TYPES - 1) + 2
-    + 18 + NUM_RESOURCES + 1 + NUM_RESOURCES + 2
+    NUM_PROMPTS
+    + 7
+    + NUM_RESOURCES
+    + 1
+    + NUM_DEV_TYPES
+    + (NUM_DEV_TYPES - 1)
+    + 2
+    + 18
+    + NUM_RESOURCES
+    + 1
+    + NUM_RESOURCES
+    + 2
 )
 
 
@@ -70,7 +80,9 @@ def encode(env, s, seat):
     node_production = (
         pad_kind[adjacent_pad][..., :NUM_RESOURCES]
         * pad_probability[adjacent_pad][..., None]
-    ).sum(axis=1)  # [N, 5]
+    ).sum(
+        axis=1
+    )  # [N, 5]
 
     port_one_hot = jax.nn.one_hot(s.port_resource, ANY_PORT + 1, dtype=jnp.float32)
     node_port = jnp.zeros((env.topo.num_nodes, ANY_PORT + 1), jnp.float32)

@@ -55,12 +55,7 @@ YOP_PAIRS = np.array(
     dtype=np.int32,
 )
 MARITIME_PAIRS = np.array(
-    [
-        (i, j)
-        for i in range(NUM_RESOURCES)
-        for j in range(NUM_RESOURCES)
-        if i != j
-    ],
+    [(i, j) for i in range(NUM_RESOURCES) for j in range(NUM_RESOURCES) if i != j],
     dtype=np.int32,
 )
 
@@ -216,9 +211,7 @@ def get_topology(map_type="BASE"):
         node_neighbors=_pad(neighbor_rows, 3),
         node_edges=_pad(edge_rows, 3),
         node_tiles=_pad(tile_rows, 3),
-        tile_nodes=np.array(
-            [list(t.nodes.values()) for t in land], dtype=np.int32
-        ),
+        tile_nodes=np.array([list(t.nodes.values()) for t in land], dtype=np.int32),
         port_nodes=port_nodes,
         tile_coordinates=land_coordinates,
         spiral_order=np.array(spiral, dtype=np.int32),

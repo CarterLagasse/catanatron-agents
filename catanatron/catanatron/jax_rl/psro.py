@@ -39,7 +39,9 @@ def _regret_matching(payoffs, iterations):
         regrets, average = carry
         positive = jnp.maximum(regrets, 0.0)
         total = positive.sum()
-        strategy = jnp.where(total > 0, positive / jnp.maximum(total, 1e-12), 1.0 / size)
+        strategy = jnp.where(
+            total > 0, positive / jnp.maximum(total, 1e-12), 1.0 / size
+        )
         values = payoffs @ strategy
         regrets = jnp.maximum(regrets + values - strategy @ values, 0.0)
         return (regrets, average + strategy), None
@@ -145,7 +147,9 @@ def evaluate_member(arena, population, kind, params, key):
             result = arena.against_scripted(k_match, member_params, bot)
             result["payoff"] = -result["payoff"]
         else:
-            result = {"payoff": _scripted_vs_scripted(arena, kind, member_kind, k_match)}
+            result = {
+                "payoff": _scripted_vs_scripted(arena, kind, member_kind, k_match)
+            }
         row.append(result["payoff"])
     return row
 
@@ -212,7 +216,12 @@ def train_response(trainer, population, strategy, params, key, rng, log, label):
             carry = reset_pool_games(trainer, carry, k_reset)
         if iteration % 25 == 0 or iteration == iterations:
             games = max(window["games"], 1.0)
-            rate = iteration * config.num_envs * config.rollout_ticks / (time.time() - start)
+            rate = (
+                iteration
+                * config.num_envs
+                * config.rollout_ticks
+                / (time.time() - start)
+            )
             log(
                 f"  {label} it {iteration}/{iterations} {rate:.0f}/s "
                 f"win vs mixture {window['wins'] / games:.3f} over {games:.0f} games "
@@ -255,11 +264,15 @@ def train(config, run_dir, log=print, init_params=None, resume=False, max_hours=
     first_trainer = Trainer(first)
     # Same step function layout, shorter learning-rate schedule.
     later_trainer = Trainer(later)
-    arena = Arena(first_trainer.env, first_trainer.policy, config.eval_envs, config.eval_ticks)
+    arena = Arena(
+        first_trainer.env, first_trainer.policy, config.eval_envs, config.eval_ticks
+    )
 
     population = Population()
     key, k_params = jax.random.split(key)
-    params = init_params if init_params is not None else first_trainer.init_params(k_params)
+    params = (
+        init_params if init_params is not None else first_trainer.init_params(k_params)
+    )
     if resume and (run_dir / "population.json").exists():
         history = _restore(population, run_dir)
         params = next(p for p in reversed(population.params) if p is not None)
@@ -279,7 +292,11 @@ def train(config, run_dir, log=print, init_params=None, resume=False, max_hours=
             row = evaluate_member(arena, population, -1, frozen, k_eval)
             population.add("init", -1, frozen, row)
             checkpoint.save_params(
-                run_dir / "init.npz", frozen, config.hidden, config.rounds, config.map_type
+                run_dir / "init.npz",
+                frozen,
+                config.hidden,
+                config.rounds,
+                config.map_type,
             )
             log(f"init payoffs {np.round(row, 2).tolist()}")
         population.save(run_dir, config, solve_meta(population.payoffs), history)
@@ -309,7 +326,11 @@ def train(config, run_dir, log=print, init_params=None, resume=False, max_hours=
         name = f"br_{iteration:02d}"
         population.add(name, -1, frozen, row)
         checkpoint.save_params(
-            run_dir / f"{name}.npz", frozen, config.hidden, config.rounds, config.map_type
+            run_dir / f"{name}.npz",
+            frozen,
+            config.hidden,
+            config.rounds,
+            config.map_type,
         )
 
         strategy = solve_meta(population.payoffs)
@@ -336,17 +357,26 @@ def train(config, run_dir, log=print, init_params=None, resume=False, max_hours=
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--run-dir", default="runs/psro")
-    parser.add_argument("--map-type", default="BASE", choices=["BASE", "MINI", "TOURNAMENT"])
+    parser.add_argument(
+        "--map-type", default="BASE", choices=["BASE", "MINI", "TOURNAMENT"]
+    )
     parser.add_argument("--iterations", type=int, default=PSROConfig.iterations)
     parser.add_argument(
-        "--first-response-timesteps", type=int, default=PSROConfig.first_response_timesteps
+        "--first-response-timesteps",
+        type=int,
+        default=PSROConfig.first_response_timesteps,
     )
-    parser.add_argument("--response-timesteps", type=int, default=PSROConfig.response_timesteps)
+    parser.add_argument(
+        "--response-timesteps", type=int, default=PSROConfig.response_timesteps
+    )
     parser.add_argument("--num-envs", type=int, default=PSROConfig.num_envs)
     parser.add_argument("--hidden", type=int, default=PSROConfig.hidden)
     parser.add_argument("--rounds", type=int, default=PSROConfig.rounds)
     parser.add_argument(
-        "--eval-envs", type=int, default=PSROConfig.eval_envs, help="more means less noisy payoffs"
+        "--eval-envs",
+        type=int,
+        default=PSROConfig.eval_envs,
+        help="more means less noisy payoffs",
     )
     parser.add_argument(
         "--scripted-population",
@@ -354,8 +384,12 @@ def main():
         help="scripted bots in the population. Leave out any that weak networks cannot beat, "
         "or the mixture ends up playing the bot and not a network",
     )
-    parser.add_argument("--init-from", default=None, help="checkpoint to warm start from")
-    parser.add_argument("--resume", action="store_true", help="continue the run in --run-dir")
+    parser.add_argument(
+        "--init-from", default=None, help="checkpoint to warm start from"
+    )
+    parser.add_argument(
+        "--resume", action="store_true", help="continue the run in --run-dir"
+    )
     parser.add_argument("--max-hours", type=float, default=None)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()

@@ -4,6 +4,7 @@ import tempfile
 from click.testing import CliRunner
 import pandas as pd
 
+from catanatron.cli.accumulators import StatisticsAccumulator
 from catanatron.cli.play import simulate
 
 
@@ -33,6 +34,14 @@ def test_play_with_random_number_placement():
     )
     assert result.exit_code == 0
     assert "Game Summary" in result.output
+
+
+def test_summary_survives_no_finished_games():
+    # All games hitting the turn limit used to crash the summary with a ZeroDivisionError.
+    accumulator = StatisticsAccumulator()
+    assert accumulator.get_avg_ticks() == 0
+    assert accumulator.get_avg_turns() == 0
+    assert accumulator.get_avg_duration() == 0
 
 
 def test_play_with_friendly_robber():

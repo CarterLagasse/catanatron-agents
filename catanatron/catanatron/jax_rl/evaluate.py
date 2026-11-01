@@ -64,12 +64,16 @@ class Arena:
             won = info.done & (info.winner == seat_a)
             lost = info.done & (info.winner >= 0) & (info.winner != seat_a)
             drew = info.done & (info.winner < 0)
-            new_seats = jax.random.bernoulli(k_seat, 0.5, seat_a.shape).astype(jnp.int32)
+            new_seats = jax.random.bernoulli(k_seat, 0.5, seat_a.shape).astype(
+                jnp.int32
+            )
             seat_a = jnp.where(info.done, new_seats, seat_a)
             counts = jnp.stack([won.sum(), lost.sum(), drew.sum()])
             return (states, seat_a), counts
 
-        _, counts = jax.lax.scan(tick, (states, seat_a), jax.random.split(k_loop, self.ticks))
+        _, counts = jax.lax.scan(
+            tick, (states, seat_a), jax.random.split(k_loop, self.ticks)
+        )
         return counts.sum(axis=0)
 
     def _match_network(self, key, params_a, params_b):

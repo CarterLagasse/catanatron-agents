@@ -155,7 +155,9 @@ class CatanEnv:
 
         self.yop_pairs = jnp.asarray(YOP_PAIRS)
         self.maritime_pairs = jnp.asarray(MARITIME_PAIRS)
-        self.yop_cards = jax.nn.one_hot(YOP_PAIRS, NUM_RESOURCES, dtype=jnp.int32).sum(1)
+        self.yop_cards = jax.nn.one_hot(YOP_PAIRS, NUM_RESOURCES, dtype=jnp.int32).sum(
+            1
+        )
         self.yop_cards = jnp.concatenate(
             [self.yop_cards, jnp.eye(NUM_RESOURCES, dtype=jnp.int32)]
         )
@@ -337,7 +339,9 @@ class CatanEnv:
                 can_yop & pair_ok,
                 can_yop & single_ok,
                 jnp.broadcast_to(normal & playable[MONOPOLY], (NUM_RESOURCES,)),
-                jnp.stack([may_move & ~can_steal, may_move & can_steal], axis=1).ravel(),
+                jnp.stack(
+                    [may_move & ~can_steal, may_move & can_steal], axis=1
+                ).ravel(),
                 maritime,
             ]
         )
@@ -349,7 +353,9 @@ class CatanEnv:
         dice = jax.random.randint(k_a, (), 1, 7) + jax.random.randint(k_b, (), 1, 7)
         victim_hand = s.hand[1 - s.current]
         # log(0) = -inf is never drawn by categorical
-        stolen = jax.random.categorical(k_steal, jnp.log(victim_hand.astype(jnp.float32)))
+        stolen = jax.random.categorical(
+            k_steal, jnp.log(victim_hand.astype(jnp.float32))
+        )
         return Chance(dice=dice, stolen=stolen)
 
     def _apply(self, s, action, chance):
@@ -375,7 +381,9 @@ class CatanEnv:
         is_robber = in_range(topo.ROBBER, 2 * topo.num_tiles)
         is_maritime = in_range(topo.MARITIME, len(MARITIME_PAIRS))
 
-        resource = jnp.clip(action - jnp.where(is_discard, topo.DISCARD, topo.MONOPOLY), 0, 4)
+        resource = jnp.clip(
+            action - jnp.where(is_discard, topo.DISCARD, topo.MONOPOLY), 0, 4
+        )
         edge = jnp.clip(action - topo.ROAD, 0, topo.num_edges - 1)
         settlement_node = jnp.clip(action - topo.SETTLEMENT, 0, topo.num_nodes - 1)
         city_node = jnp.clip(action - topo.CITY, 0, topo.num_nodes - 1)
@@ -413,7 +421,9 @@ class CatanEnv:
                 (s.node_level * (s.node_owner == 1))[self.tile_nodes].sum(axis=1),
             ]
         )  # [2, T]
-        by_resource = jax.nn.one_hot(s.tile_resource, NUM_RESOURCES + 1, dtype=jnp.int32)[
+        by_resource = jax.nn.one_hot(
+            s.tile_resource, NUM_RESOURCES + 1, dtype=jnp.int32
+        )[
             :, :NUM_RESOURCES
         ]  # [T, 5]
         payout = (tile_levels * producing) @ by_resource  # [2, 5]
@@ -442,7 +452,9 @@ class CatanEnv:
         current = jnp.where(next_discarder, 1, current)
         current = jnp.where(all_discarded, turn_player, current)
         prompt = jnp.where(all_discarded, MOVE_ROBBER, prompt)
-        discard_counts = jnp.where(all_discarded, jnp.zeros(2, jnp.int32), discard_counts)
+        discard_counts = jnp.where(
+            all_discarded, jnp.zeros(2, jnp.int32), discard_counts
+        )
 
         # ----- Robber
         robber_tile = jnp.where(is_robber, robber_index // 2, s.robber_tile)
@@ -460,7 +472,9 @@ class CatanEnv:
         )
         dev_hand = dev_hand.at[seat].add(-plays_dev)
         dev_played = dev_played.at[seat].add(plays_dev)
-        played_dev = s.played_dev.at[seat].set(s.played_dev[seat] | (plays_dev.sum() > 0))
+        played_dev = s.played_dev.at[seat].set(
+            s.played_dev[seat] | (plays_dev.sum() > 0)
+        )
 
         prompt = jnp.where(is_knight, MOVE_ROBBER, prompt)
 
@@ -470,7 +484,10 @@ class CatanEnv:
         takes_army = (
             is_knight
             & (knights >= 3)
-            & ((holder < 0) | ((holder != seat) & (s.dev_played[other, KNIGHT] < knights)))
+            & (
+                (holder < 0)
+                | ((holder != seat) & (s.dev_played[other, KNIGHT] < knights))
+            )
         )
         army_delta = jnp.zeros(2, jnp.int32).at[seat].set(2 * takes_army)
         army_delta = army_delta.at[other].set(-2 * (takes_army & (holder == other)))
@@ -518,7 +535,9 @@ class CatanEnv:
             jnp.where(is_settlement, seat, node_owner[settlement_node])
         )
         node_level = node_level.at[settlement_node].add(is_settlement.astype(jnp.int32))
-        settlements_left = settlements_left.at[seat].add(-is_settlement.astype(jnp.int32))
+        settlements_left = settlements_left.at[seat].add(
+            -is_settlement.astype(jnp.int32)
+        )
         vp_public = vp_public.at[seat].add(is_settlement.astype(jnp.int32))
         vp_actual = vp_actual.at[seat].add(is_settlement.astype(jnp.int32))
         last_settlement = s.last_settlement.at[seat].set(
@@ -534,8 +553,9 @@ class CatanEnv:
         adjacent = self.node_tiles[settlement_node]
         adjacent_resources = jnp.where(adjacent >= 0, s.tile_resource[adjacent], DESERT)
         start_cards = (
-            jax.nn.one_hot(adjacent_resources, NUM_RESOURCES + 1, dtype=jnp.int32)
-            .sum(axis=0)[:NUM_RESOURCES]
+            jax.nn.one_hot(adjacent_resources, NUM_RESOURCES + 1, dtype=jnp.int32).sum(
+                axis=0
+            )[:NUM_RESOURCES]
         ) * second_house
         hand = hand.at[seat].add(start_cards)
         bank = bank - start_cards
@@ -608,7 +628,9 @@ class CatanEnv:
 
         # ----- End turn
         owned_now = (dev_hand[seat] > 0).at[VICTORY_POINT].set(False)
-        dev_owned = dev_owned.at[seat].set(jnp.where(is_end, owned_now, dev_owned[seat]))
+        dev_owned = dev_owned.at[seat].set(
+            jnp.where(is_end, owned_now, dev_owned[seat])
+        )
         played_dev = played_dev.at[seat].set(played_dev[seat] & ~is_end)
         has_rolled = has_rolled.at[seat].set(has_rolled[seat] & ~is_end)
         current = jnp.where(is_end, other, current)
@@ -668,9 +690,7 @@ class CatanEnv:
         blocked = jnp.concatenate([blocked, jnp.ones(1, bool)])
 
         node = jnp.nonzero(reach_seat, size=ROAD_FRONTIER, fill_value=0)[0]
-        alive = reach_seat[node] & (
-            jnp.arange(ROAD_FRONTIER) < reach_seat.sum()
-        )
+        alive = reach_seat[node] & (jnp.arange(ROAD_FRONTIER) < reach_seat.sum())
         used = jnp.zeros(ROAD_FRONTIER, jnp.int32)
 
         def expand(frontier):
@@ -695,7 +715,13 @@ class CatanEnv:
             _, _, _, count, length = frontier
             return (count > 0) & (length < MAX_ROADS)
 
-        start = (node, used, alive, jnp.maximum(alive.sum(), 1), jnp.zeros((), jnp.int32))
+        start = (
+            node,
+            used,
+            alive,
+            jnp.maximum(alive.sum(), 1),
+            jnp.zeros((), jnp.int32),
+        )
         return jax.lax.while_loop(not_finished, expand, start)[4]
 
     def _apply_road_result(self, s, length):
@@ -796,7 +822,9 @@ class CatanEnv:
         """
         batch = states.done.shape[0]
         k_chance, k_reset = jax.random.split(key)
-        chances = jax.vmap(self.sample_chance)(jax.random.split(k_chance, batch), states)
+        chances = jax.vmap(self.sample_chance)(
+            jax.random.split(k_chance, batch), states
+        )
         before = jax.vmap(self.potential)(states)
         played = self.apply_chance(states, actions, chances)
         after = jax.vmap(self.potential)(played)

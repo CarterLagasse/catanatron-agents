@@ -42,7 +42,12 @@ def paired_difference(records_a, records_b):
     mean = sum(deltas) / count
     variance = sum((d - mean) ** 2 for d in deltas) / (count - 1)
     spread = Z_95 * math.sqrt(variance / count)
-    return {"games": count, "difference": mean, "ci_low": mean - spread, "ci_high": mean + spread}
+    return {
+        "games": count,
+        "difference": mean,
+        "ci_low": mean - spread,
+        "ci_high": mean + spread,
+    }
 
 
 def verdict(low, high, even=0.5):
@@ -142,7 +147,14 @@ def main():
                 path = spec[:-2] if greedy else spec
                 records_path = run_dir / f"{_slug(name)}__{_slug(opponent)}.jsonl"
                 results[name, opponent] = play_match(
-                    path, opponent, games, pool, greedy, args.map_type, args.seed, records_path
+                    path,
+                    opponent,
+                    games,
+                    pool,
+                    greedy,
+                    args.map_type,
+                    args.seed,
+                    records_path,
                 )
                 r = summarize(results[name, opponent])
                 print(

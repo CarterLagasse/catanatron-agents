@@ -110,14 +110,15 @@ class StatisticsAccumulator(GameAccumulator):
             points = get_actual_victory_points(game.state, color)
             self.results_by_player[color].append(points)
 
+    # Games that hit the turn limit have no winner and aren't tracked, so these can be empty.
     def get_avg_ticks(self):
-        return sum(self.ticks) / len(self.ticks)
+        return sum(self.ticks) / len(self.ticks) if self.ticks else 0.0
 
     def get_avg_turns(self):
-        return sum(self.turns) / len(self.turns)
+        return sum(self.turns) / len(self.turns) if self.turns else 0.0
 
     def get_avg_duration(self):
-        return sum(self.durations) / len(self.durations)
+        return sum(self.durations) / len(self.durations) if self.durations else 0.0
 
 
 class JsonDataAccumulator(GameAccumulator):

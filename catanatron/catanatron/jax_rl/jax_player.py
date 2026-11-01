@@ -172,7 +172,11 @@ def _play_games(args):
         records.append(
             {
                 "seed": game_seed,
-                "result": "draw" if winner is None else ("win" if winner == Color.BLUE else "loss"),
+                "result": (
+                    "draw"
+                    if winner is None
+                    else ("win" if winner == Color.BLUE else "loss")
+                ),
                 "seat": seat,
                 "vps": game.state.player_state[f"P{seat}_ACTUAL_VICTORY_POINTS"],
                 "member": int(agent._active) if isinstance(agent, JaxPlayer) else 0,
@@ -188,7 +192,11 @@ def wilson_interval(successes, total, z=1.96):
     rate = successes / total
     denominator = 1 + z * z / total
     center = (rate + z * z / (2 * total)) / denominator
-    spread = z * math.sqrt(rate * (1 - rate) / total + z * z / (4 * total * total)) / denominator
+    spread = (
+        z
+        * math.sqrt(rate * (1 - rate) / total + z * z / (4 * total * total))
+        / denominator
+    )
     return max(center - spread, 0.0), min(center + spread, 1.0)
 
 
@@ -219,13 +227,23 @@ def summarize(records):
 
 
 def play_match(
-    agent, opponent, games, pool, greedy=False, map_type="BASE", seed=0, records_path=None, chunk=25
+    agent,
+    opponent,
+    games,
+    pool,
+    greedy=False,
+    map_type="BASE",
+    seed=0,
+    records_path=None,
+    chunk=25,
 ):
     """Plays seeds seed..seed+games-1. With records_path, finished games are kept
     in a JSON-lines file and a rerun plays only the seeds still missing."""
     records = []
     if records_path is not None and Path(records_path).exists():
-        records = [json.loads(line) for line in Path(records_path).read_text().splitlines()]
+        records = [
+            json.loads(line) for line in Path(records_path).read_text().splitlines()
+        ]
     finished = {r["seed"] for r in records}
     missing = [s for s in range(seed, seed + games) if s not in finished]
     jobs = [
@@ -241,13 +259,17 @@ def play_match(
     return records
 
 
-def benchmark(agent_path, opponents, games, workers, greedy=False, map_type="BASE", seed=0):
+def benchmark(
+    agent_path, opponents, games, workers, greedy=False, map_type="BASE", seed=0
+):
     """Returns {opponent: result}, playing `games` real engine games per opponent."""
     import multiprocessing
 
     with multiprocessing.get_context("spawn").Pool(workers) as pool:
         return {
-            spec: summarize(play_match(agent_path, spec, games, pool, greedy, map_type, seed))
+            spec: summarize(
+                play_match(agent_path, spec, games, pool, greedy, map_type, seed)
+            )
             for spec in opponents
         }
 
@@ -261,7 +283,9 @@ def main():
     parser.add_argument("--greedy", action="store_true")
     parser.add_argument("--map-type", default="BASE")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--output", default=None, help="write results to this JSON file")
+    parser.add_argument(
+        "--output", default=None, help="write results to this JSON file"
+    )
     args = parser.parse_args()
     results = benchmark(
         args.agent,

@@ -113,7 +113,9 @@ def state_from_game(game, topo, batch_dim=True):
     tile_number = np.zeros(topo.num_tiles, np.int32)
     for i, coordinate in enumerate(topo.tile_coordinates):
         tile = catan_map.land_tiles[coordinate]
-        tile_resource[i] = DESERT if tile.resource is None else _RESOURCE_INDEX[tile.resource]
+        tile_resource[i] = (
+            DESERT if tile.resource is None else _RESOURCE_INDEX[tile.resource]
+        )
         tile_number[i] = tile.number or 0
 
     port_resource = np.zeros(topo.num_ports, np.int32)
@@ -150,7 +152,9 @@ def state_from_game(game, topo, batch_dim=True):
         dev_owned[:, i] = per_seat(f"{dev}_OWNED_AT_START").astype(bool)
 
     # Python pops the deck from the end; JAX draws upward from dev_drawn.
-    remaining = [DEVELOPMENT_CARDS.index(c) for c in reversed(state.development_listdeck)]
+    remaining = [
+        DEVELOPMENT_CARDS.index(c) for c in reversed(state.development_listdeck)
+    ]
     drawn = len(DEV_DECK) - len(remaining)
     composition = np.bincount(DEV_DECK, minlength=NUM_DEV_TYPES) - np.bincount(
         remaining, minlength=NUM_DEV_TYPES
@@ -183,7 +187,9 @@ def state_from_game(game, topo, batch_dim=True):
         node_owner=node_owner,
         node_level=node_level,
         edge_owner=edge_owner,
-        robber_tile=np.array(topo.tile_coordinates.index(board.robber_coordinate), np.int32),
+        robber_tile=np.array(
+            topo.tile_coordinates.index(board.robber_coordinate), np.int32
+        ),
         reach=reach,
         hand=hand,
         bank=np.array(state.resource_freqdeck, np.int32),

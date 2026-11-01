@@ -68,19 +68,34 @@ def measure(num_envs, hidden, rounds, iterations=2):
     opt_state = trainer.optimizer.init(params)
     carry = trainer.init_carry(key)
     codes = trainer.scripted_codes(key)
-    pool_params, pool_kinds = sample_pool(trainer, [params], params, np.random.default_rng(0))
+    pool_params, pool_kinds = sample_pool(
+        trainer, [params], params, np.random.default_rng(0)
+    )
 
     def iterate(params, opt_state, carry, seed):
         return trainer.run_iteration(
-            params, opt_state, carry, codes, pool_params, pool_kinds, 0.0, jax.random.PRNGKey(seed)
+            params,
+            opt_state,
+            carry,
+            codes,
+            pool_params,
+            pool_kinds,
+            0.0,
+            jax.random.PRNGKey(seed),
         )
 
-    params, opt_state, carry, _ = jax.block_until_ready(iterate(params, opt_state, carry, 0))
+    params, opt_state, carry, _ = jax.block_until_ready(
+        iterate(params, opt_state, carry, 0)
+    )
     started = time.perf_counter()
     for seed in range(1, iterations + 1):
-        params, opt_state, carry, _ = jax.block_until_ready(iterate(params, opt_state, carry, seed))
+        params, opt_state, carry, _ = jax.block_until_ready(
+            iterate(params, opt_state, carry, seed)
+        )
     elapsed = time.perf_counter() - started
-    results["training_ticks_per_s"] = iterations * num_envs * config.rollout_ticks / elapsed
+    results["training_ticks_per_s"] = (
+        iterations * num_envs * config.rollout_ticks / elapsed
+    )
     results["device"] = str(jax.devices()[0])
     return results
 
@@ -92,7 +107,9 @@ def main():
     parser.add_argument("--rounds", type=int, default=PPOConfig.rounds)
     args = parser.parse_args()
     for name, value in measure(args.num_envs, args.hidden, args.rounds).items():
-        print(f"{name}: {value:.1f}" if isinstance(value, float) else f"{name}: {value}")
+        print(
+            f"{name}: {value:.1f}" if isinstance(value, float) else f"{name}: {value}"
+        )
 
 
 if __name__ == "__main__":

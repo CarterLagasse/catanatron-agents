@@ -82,7 +82,9 @@ class PPOConfig:
     def num_pool(self):
         if self.pool_fraction <= 0:
             return 0
-        per_segment = max(1, round(self.num_envs * self.pool_fraction / self.pool_segments))
+        per_segment = max(
+            1, round(self.num_envs * self.pool_fraction / self.pool_segments)
+        )
         return per_segment * self.pool_segments
 
     @property
@@ -95,7 +97,9 @@ class PPOConfig:
 
     @property
     def expected_learner_fraction(self):
-        return (self.num_self + 0.5 * (self.num_pool + self.num_scripted)) / self.num_envs
+        return (
+            self.num_self + 0.5 * (self.num_pool + self.num_scripted)
+        ) / self.num_envs
 
 
 class Transition(NamedTuple):
@@ -125,7 +129,10 @@ class Trainer:
         self.policy = GraphPolicy(self.env, config.hidden, config.rounds)
 
         num_train = int(
-            config.num_envs * config.rollout_ticks * config.expected_learner_fraction * 0.98
+            config.num_envs
+            * config.rollout_ticks
+            * config.expected_learner_fraction
+            * 0.98
         )
         self.minibatch_size = num_train // config.num_minibatches
         self.num_train = self.minibatch_size * config.num_minibatches
@@ -200,9 +207,7 @@ class Trainer:
                     seg_states
                 )
                 logits = jnp.where(kind < 0, logits, bot)
-                return jax.random.categorical(
-                    k, jnp.where(seg_masks, logits, -1e9)
-                )
+                return jax.random.categorical(k, jnp.where(seg_masks, logits, -1e9))
 
             def carve(x):
                 y = x[first : first + c.num_pool]
@@ -307,11 +312,7 @@ class Trainer:
 
             batch = jnp.arange(t.seat.shape[0])
             seat = t.seat.astype(jnp.int32)
-            delta = (
-                pending[batch, seat]
-                + c.gamma * next_value[batch, seat]
-                - t.value
-            )
+            delta = pending[batch, seat] + c.gamma * next_value[batch, seat] - t.value
             advantage = delta + c.gamma * c.gae_lambda * next_advantage[batch, seat]
 
             learner = t.is_learner
@@ -373,7 +374,9 @@ class Trainer:
         approx_kl = ((ratio - 1.0 - jnp.log(ratio)) * weight).sum() / norm
         return loss, (policy_loss, value_loss, mean_entropy, approx_kl)
 
-    def _update(self, params, opt_state, transitions, advantages, returns, entropy_coef, key):
+    def _update(
+        self, params, opt_state, transitions, advantages, returns, entropy_coef, key
+    ):
         c = self.config
 
         # Keep learner decisions, in random order. Slots past the true count are
@@ -384,9 +387,13 @@ class Trainer:
         flat_learner = flatten(transitions.is_learner)
         k_order, k_epochs = jax.random.split(key)
         noise = jax.random.uniform(k_order, flat_learner.shape)
-        order = jnp.argsort(jnp.where(flat_learner, noise, 2.0 + noise))[: self.num_train]
+        order = jnp.argsort(jnp.where(flat_learner, noise, 2.0 + noise))[
+            : self.num_train
+        ]
         dataset = {
-            "state": jax.tree_util.tree_map(lambda x: flatten(x)[order], transitions.state),
+            "state": jax.tree_util.tree_map(
+                lambda x: flatten(x)[order], transitions.state
+            ),
             "action": flatten(transitions.action)[order],
             "log_prob": flatten(transitions.log_prob)[order],
             "value": flatten(transitions.value)[order],
@@ -413,7 +420,9 @@ class Trainer:
         (params, opt_state), aux = jax.lax.scan(
             epoch, (params, opt_state), jax.random.split(k_epochs, c.update_epochs)
         )
-        policy_loss, value_loss, entropy, approx_kl = jax.tree_util.tree_map(jnp.mean, aux)
+        policy_loss, value_loss, entropy, approx_kl = jax.tree_util.tree_map(
+            jnp.mean, aux
+        )
         y = dataset["return"]
         weight = dataset["weight"]
         norm = jnp.maximum(weight.sum(), 1.0)
@@ -421,13 +430,17 @@ class Trainer:
         explained = 1.0 - _weighted_var(residual, weight, norm) / (
             _weighted_var(y, weight, norm) + 1e-8
         )
-        return params, opt_state, {
-            "policy_loss": policy_loss,
-            "value_loss": value_loss,
-            "entropy": entropy,
-            "approx_kl": approx_kl,
-            "explained_variance": explained,
-        }
+        return (
+            params,
+            opt_state,
+            {
+                "policy_loss": policy_loss,
+                "value_loss": value_loss,
+                "entropy": entropy,
+                "approx_kl": approx_kl,
+                "explained_variance": explained,
+            },
+        )
 
     def _iteration(
         self,
@@ -446,7 +459,9 @@ class Trainer:
             params, carry, opponent_codes, pool_params, pool_kinds, k_rollout
         )
         advantages, returns = self.compute_gae(transitions, last_values)
-        entropy_coef = c.entropy_coef + progress * (c.final_entropy_coef - c.entropy_coef)
+        entropy_coef = c.entropy_coef + progress * (
+            c.final_entropy_coef - c.entropy_coef
+        )
         params, opt_state, metrics = self._update(
             params, opt_state, transitions, advantages, returns, entropy_coef, k_update
         )
@@ -473,7 +488,15 @@ class Trainer:
         return params, opt_state, carry, metrics
 
     def run_iteration(
-        self, params, opt_state, carry, opponent_codes, pool_params, pool_kinds, progress, key
+        self,
+        params,
+        opt_state,
+        carry,
+        opponent_codes,
+        pool_params,
+        pool_kinds,
+        progress,
+        key,
     ):
         return self.iteration_fn(
             params,
@@ -556,7 +579,9 @@ def _load_resume_state(trainer, run_dir, log):
     opt_state = optax.tree_utils.tree_set(
         trainer.optimizer.init(params), count=jnp.asarray(updates, jnp.int32)
     )
-    log(f"No train_state.pkl: resuming from latest.npz at iteration {last['iteration']}")
+    log(
+        f"No train_state.pkl: resuming from latest.npz at iteration {last['iteration']}"
+    )
     return {
         "params": params,
         "opt_state": opt_state,
@@ -626,7 +651,14 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
             progress = (iteration - 1) / max(trainer.iterations - 1, 1)
             key, k_iter, k_reset, k_codes = jax.random.split(key, 4)
             params, opt_state, carry, metrics = trainer.run_iteration(
-                params, opt_state, carry, codes, pool_params, pool_kinds, progress, k_iter
+                params,
+                opt_state,
+                carry,
+                codes,
+                pool_params,
+                pool_kinds,
+                progress,
+                k_iter,
             )
             steps += config.num_envs * config.rollout_ticks
 
@@ -642,7 +674,9 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
             row = {k: float(v) for k, v in metrics.items()}
             row.update(iteration=iteration, steps=steps, seconds=time.time() - start)
 
-            should_eval = iteration % config.eval_every == 0 or iteration == trainer.iterations
+            should_eval = (
+                iteration % config.eval_every == 0 or iteration == trainer.iterations
+            )
             if should_eval:
                 key, k_eval = jax.random.split(key)
                 score = {}
@@ -651,11 +685,29 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
                     result = arena.against_scripted(k_match, params, name)
                     score[name] = result
                     row[f"eval_{name}_win"] = result["win_rate"]
-                checkpoint.save_params(run_dir / "latest.npz", params, config.hidden, config.rounds, config.map_type)
-                checkpoint.save_params(run_dir / "snapshots" / f"it_{iteration:05d}.npz", params, config.hidden, config.rounds, config.map_type)
+                checkpoint.save_params(
+                    run_dir / "latest.npz",
+                    params,
+                    config.hidden,
+                    config.rounds,
+                    config.map_type,
+                )
+                checkpoint.save_params(
+                    run_dir / "snapshots" / f"it_{iteration:05d}.npz",
+                    params,
+                    config.hidden,
+                    config.rounds,
+                    config.map_type,
+                )
                 if score["heuristic"]["win_rate"] >= best_score:
                     best_score = score["heuristic"]["win_rate"]
-                    checkpoint.save_params(run_dir / "best.npz", params, config.hidden, config.rounds, config.map_type)
+                    checkpoint.save_params(
+                        run_dir / "best.npz",
+                        params,
+                        config.hidden,
+                        config.rounds,
+                        config.map_type,
+                    )
 
             # The row goes first so saved state never gets ahead of the metrics file.
             metrics_file.write(json.dumps(row) + "\n")
@@ -675,7 +727,9 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
             if should_eval or iteration % 5 == 0 or iteration == 1:
                 log(_format_row(row))
 
-    checkpoint.save_params(run_dir / "latest.npz", params, config.hidden, config.rounds, config.map_type)
+    checkpoint.save_params(
+        run_dir / "latest.npz", params, config.hidden, config.rounds, config.map_type
+    )
     return params
 
 
@@ -710,7 +764,9 @@ def _format_row(row):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--run-dir", default="runs/ppo")
-    parser.add_argument("--map-type", default="BASE", choices=["BASE", "MINI", "TOURNAMENT"])
+    parser.add_argument(
+        "--map-type", default="BASE", choices=["BASE", "MINI", "TOURNAMENT"]
+    )
     parser.add_argument("--timesteps", type=int, default=PPOConfig.total_timesteps)
     parser.add_argument("--num-envs", type=int, default=PPOConfig.num_envs)
     parser.add_argument("--rollout-ticks", type=int, default=PPOConfig.rollout_ticks)
@@ -721,11 +777,17 @@ def main():
     parser.add_argument("--entropy-coef", type=float, default=PPOConfig.entropy_coef)
     parser.add_argument("--shaping-vp", type=float, default=PPOConfig.shaping_vp)
     parser.add_argument("--pool-fraction", type=float, default=PPOConfig.pool_fraction)
-    parser.add_argument("--scripted-fraction", type=float, default=PPOConfig.scripted_fraction)
+    parser.add_argument(
+        "--scripted-fraction", type=float, default=PPOConfig.scripted_fraction
+    )
     parser.add_argument("--eval-every", type=int, default=PPOConfig.eval_every)
     parser.add_argument("--eval-envs", type=int, default=PPOConfig.eval_envs)
-    parser.add_argument("--init-from", default=None, help="checkpoint to warm start from")
-    parser.add_argument("--resume", action="store_true", help="continue the run in --run-dir")
+    parser.add_argument(
+        "--init-from", default=None, help="checkpoint to warm start from"
+    )
+    parser.add_argument(
+        "--resume", action="store_true", help="continue the run in --run-dir"
+    )
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
