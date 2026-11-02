@@ -20,12 +20,12 @@ export const RESOURCE_NAMES: Record<ResourceCard, string> = {
   ORE: "Ore",
 };
 
-export const DEV_CARDS: { card: DevelopmentCard | "VICTORY_POINT"; name: string; hint: string }[] = [
-  { card: "KNIGHT", name: "Knight", hint: "Move the robber and steal a card" },
-  { card: "YEAR_OF_PLENTY", name: "Year of Plenty", hint: "Take any 2 cards from the bank" },
-  { card: "MONOPOLY", name: "Monopoly", hint: "Take every card of one resource" },
-  { card: "ROAD_BUILDING", name: "Road Building", hint: "Build 2 roads for free" },
-  { card: "VICTORY_POINT", name: "Victory Point", hint: "Worth 1 point, counted automatically" },
+export const DEV_CARDS: { card: DevelopmentCard | "VICTORY_POINT"; name: string; short: string; hint: string }[] = [
+  { card: "KNIGHT", name: "Knight", short: "Knight", hint: "Move the robber and steal a card" },
+  { card: "YEAR_OF_PLENTY", name: "Year of Plenty", short: "Plenty", hint: "Take any 2 cards from the bank" },
+  { card: "MONOPOLY", name: "Monopoly", short: "Monopoly", hint: "Take every card of one resource" },
+  { card: "ROAD_BUILDING", name: "Road Building", short: "Roads", hint: "Build 2 roads for free" },
+  { card: "VICTORY_POINT", name: "Victory Point", short: "Point", hint: "Worth 1 point, counted automatically" },
 ];
 
 export const BUILD_COSTS: Record<string, ResourceCard[]> = {
@@ -176,6 +176,28 @@ export function rollHistogram(gs: GameState) {
 
 export const turnsPlayed = (gs: GameState) =>
   gs.action_records.filter((record) => record[0][1] === "END_TURN").length;
+
+/** One player's totals for the end-of-game table. */
+export function playerStats(gs: GameState, color: Color) {
+  const key = playerKey(gs, color);
+  const state = gs.player_state;
+  const records = gs.action_records.filter((record) => record[0][0] === color);
+  const count = (type: GameAction[1]) => records.filter((record) => record[0][1] === type).length;
+  const buildings = Object.values(gs.nodes).filter((node) => node.color === color);
+  return {
+    points: state[`${key}_ACTUAL_VICTORY_POINTS`] ?? 0,
+    settlements: buildings.filter((node) => node.building === "SETTLEMENT").length,
+    cities: buildings.filter((node) => node.building === "CITY").length,
+    roads: count("BUILD_ROAD"),
+    longestRoad: state[`${key}_LONGEST_ROAD_LENGTH`] ?? 0,
+    knights: state[`${key}_PLAYED_KNIGHT`] ?? 0,
+    devCards: count("BUY_DEVELOPMENT_CARD"),
+    trades: count("MARITIME_TRADE"),
+    stolen: records.filter((record) => record[0][1] === "MOVE_ROBBER" && record[1]).length,
+    discarded: count("DISCARD_RESOURCE"),
+    income: Object.values(income(gs, color)).reduce((sum, value) => sum + value, 0),
+  };
+}
 
 /** What a roll paid each player, read from the change in their hands. */
 export function rollGains(previous: GameState, next: GameState): RollGains | null {

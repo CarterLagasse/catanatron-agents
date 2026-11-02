@@ -1,18 +1,20 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import cn from "classnames";
-import { Tooltip } from "@mui/material";
+import { Button } from "@mui/material";
 
 import type { Color, GameState } from "../utils/api.types";
 import type { StateIndex } from "../utils/apiClient";
-import { RESOURCE_NAMES, RESOURCES, income, rollHistogram, pips } from "../utils/gameLogic";
+import { RESOURCE_NAMES, RESOURCES, income } from "../utils/gameLogic";
 import { buildLog } from "../utils/gameLog";
 import { getHumanColor } from "../utils/stateUtils";
 import type { RollGains } from "../utils/gameLogic";
 import AnalysisBox from "./AnalysisBox";
 import BankTray from "./BankTray";
+import DiceChart from "./DiceChart";
 import { Die } from "./DiceRoll";
 import ResourceIcon from "./ResourceIcon";
 import Scoreboard from "./Scoreboard";
+import WinOddsChart from "./WinOddsChart";
 import "./SidePanel.scss";
 
 function GameLog({
@@ -79,46 +81,27 @@ function GameLog({
   );
 }
 
-function DiceChart({ gameState }: { gameState: GameState }) {
-  const histogram = rollHistogram(gameState);
-  const rolls = histogram.reduce((sum, { count }) => sum + count, 0);
-  const expected = (total: number) => (pips(total) / 36) * rolls;
-  const top = Math.max(1, ...histogram.map(({ count, total }) => Math.max(count, expected(total))));
-  return (
-    <figure className="dice-chart">
-      <figcaption>
-        <strong>Dice rolls</strong>
-        <span>
-          {rolls} roll{rolls === 1 ? "" : "s"}. Bars are what happened, ticks are what's expected.
-        </span>
-      </figcaption>
-      <div className="bars">
-        {histogram.map(({ total, count }) => (
-          <Tooltip
-            key={total}
-            arrow
-            title={`${total}: rolled ${count} time${count === 1 ? "" : "s"}, expected ${expected(total).toFixed(1)}`}
-          >
-            <div className="bar-slot" aria-label={`${total}: rolled ${count}, expected ${expected(total).toFixed(1)}`}>
-              <div className="plot">
-                {count > 0 && <span className="bar" style={{ height: `${(count / top) * 100}%` }} />}
-                {rolls > 0 && <span className="tick" style={{ bottom: `${(expected(total) / top) * 100}%` }} />}
-              </div>
-              <small>{total}</small>
-            </div>
-          </Tooltip>
-        ))}
-      </div>
-    </figure>
-  );
-}
-
-function Stats({ gameState: gs }: { gameState: GameState }) {
+function Stats({
+  gameState: gs,
+  name,
+  live,
+  onSeeStats,
+}: {
+  gameState: GameState;
+  name: (color: Color) => string;
+  live: boolean;
+  onSeeStats?: () => void;
+}) {
   const human = getHumanColor(gs);
   const yours = human ? income(gs, human) : null;
   const total = yours ? Object.values(yours).reduce((sum, value) => sum + value, 0) : 0;
   return (
     <div className="stats-tab">
+      {gs.winning_color && onSeeStats && (
+        <Button className="see-all-stats" variant="outlined" color="inherit" onClick={onSeeStats}>
+          See all game stats
+        </Button>
+      )}
       <DiceChart gameState={gs} />
       {yours && (
         <section>
@@ -136,6 +119,7 @@ function Stats({ gameState: gs }: { gameState: GameState }) {
           </ul>
         </section>
       )}
+      <WinOddsChart gameState={gs} name={name} live={live} />
     </div>
   );
 }
@@ -149,6 +133,7 @@ export default function SidePanel({
   revealHidden,
   analysisIndex = "latest",
   footer,
+  onSeeStats,
 }: {
   gameState: GameState;
   name: (color: Color) => string;
@@ -156,6 +141,7 @@ export default function SidePanel({
   revealHidden: boolean;
   analysisIndex?: StateIndex;
   footer?: ReactNode;
+  onSeeStats?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("log");
   const tabBody = useRef<HTMLDivElement>(null);
@@ -198,7 +184,9 @@ export default function SidePanel({
         }}
       >
         {tab === "log" && <GameLog gameState={gameState} name={name} gainsByRecord={gainsByRecord} />}
-        {tab === "stats" && <Stats gameState={gameState} />}
+        {tab === "stats" && (
+          <Stats gameState={gameState} name={name} live={analysisIndex === "latest"} onSeeStats={onSeeStats} />
+        )}
       </div>
       {footer}
     </div>

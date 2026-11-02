@@ -1,0 +1,116 @@
+.game-stats.MuiPaper-root {
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+
+  header {
+    margin-bottom: 14px;
+    h2 {
+      margin: 0;
+      font: 600 1.7rem var(--font-display);
+    }
+    p {
+      margin: 2px 0 0;
+      color: var(--ink-2);
+    }
+  }
+  section {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--panel);
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.stats-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stats-players {
+  overflow-x: auto;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  th,
+  td {
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+  thead th {
+    --player: #999;
+    padding-top: 0;
+    vertical-align: top;
+    text-align: right;
+    font-weight: 800;
+    &.red { --player: var(--red); }
+    &.blue { --player: var(--blue); }
+    &.orange { --player: var(--orange); }
+    &.white { --player: var(--white-piece); }
+    i {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 5px;
+      border-radius: 3px;
+      background: var(--player);
+    }
+    small {
+      display: block;
+      color: var(--gold);
+      font-size: 0.7rem;
+    }
+  }
+  tbody th {
+    text-align: left;
+    color: var(--ink-2);
+    font-weight: 700;
+    small {
+      display: block;
+      color: var(--ink-3);
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+  }
+  td {
+    text-align: right;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .points-row > * {
+    font-size: 1.05rem;
+    color: var(--ink);
+  }
+}
+
+.game-stats-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 800px) {
+  .game-stats.MuiPaper-root {
+    padding: 16px;
+  }
+  .stats-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

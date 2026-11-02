@@ -7,6 +7,7 @@ import {
   isFreeRoadMode,
   missingCards,
   pips,
+  playerStats,
   recentPlacements,
   rollGains,
   rollHistogram,
@@ -287,5 +288,44 @@ describe("history", () => {
   test("survives corrupted storage", () => {
     localStorage.setItem("catanatron.games", "not json");
     expect(getGame("a")).toBeUndefined();
+  });
+});
+
+describe("playerStats", () => {
+  const record = (type: string, result: unknown = null, color = "RED") => [[color, type, null], result];
+
+  test("adds up one player's moves, ignoring the other player's", () => {
+    const stats = playerStats(
+      gameState({
+        action_records: [
+          record("BUILD_ROAD"),
+          record("BUILD_ROAD"),
+          record("BUY_DEVELOPMENT_CARD", "KNIGHT"),
+          record("MARITIME_TRADE"),
+          record("MOVE_ROBBER", "WOOD"),
+          record("MOVE_ROBBER", null),
+          record("DISCARD_RESOURCE", "ORE"),
+          record("BUILD_ROAD", null, "BLUE"),
+        ] as GameState["action_records"],
+        player_state: { P0_ACTUAL_VICTORY_POINTS: 7, P0_LONGEST_ROAD_LENGTH: 5, P0_PLAYED_KNIGHT: 2 },
+      }),
+      "RED",
+    );
+    expect(stats).toMatchObject({
+      points: 7,
+      settlements: 1,
+      cities: 0,
+      roads: 2,
+      longestRoad: 5,
+      knights: 2,
+      devCards: 1,
+      trades: 1,
+      stolen: 1,
+      discarded: 1,
+    });
+  });
+
+  test("starts at zero for a player with nothing yet", () => {
+    expect(playerStats(gameState(), "BLUE")).toMatchObject({ points: 0, settlements: 0, roads: 0, income: 0 });
   });
 });

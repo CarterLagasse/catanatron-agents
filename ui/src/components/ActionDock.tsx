@@ -32,7 +32,7 @@ import {
 } from "../utils/gameLogic";
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import DiscardPlannerDialog from "./DiscardPlannerDialog";
-import { CityArt, DevCardArt, RoadArt, SettlementArt } from "./PieceArt";
+import { CityArt, DevCardArt, DevCardLogo, RoadArt, SettlementArt } from "./PieceArt";
 import ResourceIcon from "./ResourceIcon";
 import ResourceSelector from "./ResourceSelector";
 import "./ActionDock.scss";
@@ -260,8 +260,8 @@ export default function ActionDock({ isBotThinking }: { isBotThinking: boolean }
       <div className="dock-hand">
         <Hand gameState={gs} />
         {ownedDev.length > 0 && (
-          <div className="dev-row" aria-label="Your development cards">
-            {ownedDev.map(({ card, name, hint }) => {
+          <div className={cn("dev-row", { crowded: ownedDev.length > 2 })} aria-label="Your development cards">
+            {ownedDev.map(({ card, name, short, hint }) => {
               const count = gs.player_state[`${key}_${card}_IN_HAND`];
               const canPlay =
                 card !== "VICTORY_POINT" && playable.has(PLAY_ACTIONS[card]) && !busy;
@@ -271,18 +271,20 @@ export default function ActionDock({ isBotThinking }: { isBotThinking: boolean }
                   arrow
                   title={
                     card === "VICTORY_POINT" || canPlay
-                      ? hint
-                      : `${hint}. Playable on a later turn: one per turn, and not the turn you bought it.`
+                      ? `${name}: ${hint}`
+                      : `${name}: ${hint}. Playable on a later turn: one per turn, and not the turn you bought it.`
                   }
                 >
-                  <span>
+                  <span className="dev-wrap">
                     <button
-                      className={cn("dev-card", { playable: canPlay })}
+                      className={cn("dev-card", { playable: canPlay, passive: card === "VICTORY_POINT" })}
                       disabled={!canPlay}
+                      aria-label={count > 1 ? `${name} x${count}` : name}
                       onClick={() => playDev(card as DevelopmentCard)}
                     >
-                      {name}
-                      {count > 1 && <b>x{count}</b>}
+                      <DevCardLogo card={card} />
+                      <small>{short}</small>
+                      {count > 1 && <b>{count}</b>}
                     </button>
                   </span>
                 </Tooltip>

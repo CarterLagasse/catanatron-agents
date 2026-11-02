@@ -6,7 +6,7 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import type { Color, GameState } from "../utils/api.types";
 import { cardCount, devCardCount, DEV_CARDS, hand, RESOURCES } from "../utils/gameLogic";
 import { getHumanColor, playerKey } from "../utils/stateUtils";
-import { CardsArt, DevCardArt, RoadArt } from "./PieceArt";
+import { CardsArt, DevCardArt, DevCardLogo, RoadArt } from "./PieceArt";
 import ResourceIcon from "./ResourceIcon";
 import "./Scoreboard.scss";
 
@@ -129,9 +129,12 @@ export default function Scoreboard({
                   </span>
                 ))}
                 {DEV_CARDS.filter(({ card }) => (state[`${key}_${card}_IN_HAND`] ?? 0) > 0).map(({ card, name: cardName }) => (
-                  <span key={card} className="revealed-dev">
-                    {cardName} x{state[`${key}_${card}_IN_HAND`]}
-                  </span>
+                  <Tooltip key={card} title={cardName} arrow>
+                    <span className="revealed-dev" aria-label={`${cardName} x${state[`${key}_${card}_IN_HAND`]}`}>
+                      <DevCardLogo card={card} />
+                      {state[`${key}_${card}_IN_HAND`]}
+                    </span>
+                  </Tooltip>
                 ))}
               </div>
             )}

@@ -1,0 +1,59 @@
+.dice-chart {
+  margin: 0;
+
+  figcaption {
+    margin-bottom: 8px;
+    strong {
+      display: block;
+      font: 600 0.98rem var(--font-display);
+    }
+    span {
+      color: var(--ink-3);
+      font-size: 0.75rem;
+    }
+  }
+  .bars {
+    display: flex;
+    gap: 2px;
+  }
+  .bar-slot {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    border-radius: 4px;
+    cursor: default;
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    small {
+      display: block;
+      margin-top: 3px;
+      color: var(--ink-3);
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+  }
+  .plot {
+    position: relative;
+    height: 84px;
+    border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    bottom: 0;
+    min-height: 3px;
+    border-radius: 4px 4px 0 0;
+    background: var(--chart-bar);
+  }
+  .tick {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    margin-bottom: -1px;
+    background: var(--ink);
+    box-shadow: 0 0 0 1px var(--panel);
+  }
+}

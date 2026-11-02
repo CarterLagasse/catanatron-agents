@@ -6,6 +6,7 @@ import ACTIONS from "../actions";
 import ActionDock from "../components/ActionDock";
 import DiceRoll from "../components/DiceRoll";
 import GameOverDialog from "../components/GameOverDialog";
+import GameStatsDialog from "../components/GameStatsDialog";
 import SidePanel from "../components/SidePanel";
 import TopBar, { type BotSpeed } from "../components/TopBar";
 import { CLASSIC_UI_URL } from "../configuration";
@@ -15,6 +16,7 @@ import { type StateIndex, getState, postAction } from "../utils/apiClient";
 import { gameStatus, turnsPlayed } from "../utils/gameLogic";
 import { getGame, loadSetting, playerLabel, saveResult, saveSetting } from "../utils/history";
 import { getHumanColor } from "../utils/stateUtils";
+import { useWinOddsTracker } from "../utils/winOdds";
 import ZoomableBoard from "./ZoomableBoard";
 import "./GameScreen.scss";
 
@@ -49,6 +51,7 @@ export default function GameScreen({ replayMode }: { replayMode: boolean }) {
   const [botFailed, setBotFailed] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [gameOverOpen, setGameOverOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [speed, setSpeed] = useState<BotSpeed>(() => loadSetting("botSpeed", "normal"));
   const [reveal, setReveal] = useState(() => loadSetting<string>("revealHidden", "no") === "yes");
@@ -76,8 +79,11 @@ export default function GameScreen({ replayMode }: { replayMode: boolean }) {
   useEffect(() => {
     dispatch({ type: ACTIONS.RESET_GAME });
     setGameOverOpen(false);
+    setStatsOpen(false);
     load();
   }, [load, dispatch]);
+
+  useWinOddsTracker(gameId, gameState, !replayMode);
 
   // Play the bots' moves one at a time, at a pace that can be followed.
   useEffect(() => {
@@ -144,6 +150,7 @@ export default function GameScreen({ replayMode }: { replayMode: boolean }) {
       name={name}
       gainsByRecord={state.gainsByRecord}
       revealHidden={reveal || replayMode}
+      onSeeStats={replayMode ? undefined : () => setStatsOpen(true)}
     />
   );
 
@@ -205,6 +212,22 @@ export default function GameScreen({ replayMode }: { replayMode: boolean }) {
           name={name}
           open={gameOverOpen}
           onClose={() => setGameOverOpen(false)}
+          onSeeStats={() => {
+            setGameOverOpen(false);
+            setStatsOpen(true);
+          }}
+        />
+      )}
+      {winner && !replayMode && (
+        <GameStatsDialog
+          gameState={gameState}
+          name={name}
+          open={statsOpen}
+          onClose={() => setStatsOpen(false)}
+          onBack={() => {
+            setStatsOpen(false);
+            setGameOverOpen(true);
+          }}
         />
       )}
     </div>

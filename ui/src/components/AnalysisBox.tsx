@@ -5,9 +5,10 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 
 import { store } from "../store";
 import type { Color } from "../utils/api.types";
-import { type MCTSProbabilities, type StateIndex, getMctsAnalysis } from "../utils/apiClient";
+import type { MCTSProbabilities, StateIndex } from "../utils/apiClient";
 import { isHumanTurn, turnsPlayed } from "../utils/gameLogic";
 import { getHumanColor } from "../utils/stateUtils";
+import { requestOdds } from "../utils/winOdds";
 import "./AnalysisBox.scss";
 
 type AnalysisBoxProps = {
@@ -26,13 +27,16 @@ export default function AnalysisBox({ stateIndex, name }: AnalysisBoxProps) {
   const newestAnswer = useRef(0);
 
   const turn = gs ? turnsPlayed(gs) : 0;
+  const latestIndex = useRef(0);
+  latestIndex.current = gs?.state_index ?? 0;
   const run = useCallback(async () => {
     if (!gameId) return;
     const request = ++latestRequest.current;
     setLoading(true);
     setError("");
     try {
-      const result = await getMctsAnalysis(gameId, stateIndex);
+      // Named moves, not "latest", so this shares its answer with the win odds graph.
+      const result = await requestOdds(gameId, stateIndex === "latest" ? latestIndex.current : Number(stateIndex));
       // A slower, older answer still beats nothing, unless a newer one already landed.
       if (request < newestAnswer.current) return;
       newestAnswer.current = request;
@@ -103,7 +107,7 @@ export default function AnalysisBox({ stateIndex, name }: AnalysisBoxProps) {
         !error && (
           <p className="odds-note">
             {loading
-              ? "Playing out 100 random games from here."
+              ? "Playing out random games from here."
               : stateIndex === "latest" && getHumanColor(gs)
                 ? "Updates at the start of each of your turns."
                 : "Press Update for the odds at this move."}

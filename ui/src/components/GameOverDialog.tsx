@@ -15,11 +15,13 @@ export default function GameOverDialog({
   name,
   open,
   onClose,
+  onSeeStats,
 }: {
   gameState: GameState;
   name: (color: Color) => string;
   open: boolean;
   onClose: () => void;
+  onSeeStats: () => void;
 }) {
   const { gameId } = useParams();
   const navigate = useNavigate();
@@ -77,13 +79,16 @@ export default function GameOverDialog({
             {starting ? "Starting" : "Rematch"}
           </Button>
         )}
+        <Button variant="outlined" color="inherit" onClick={onSeeStats}>
+          See stats
+        </Button>
         <Button variant="outlined" color="inherit" onClick={() => navigate("/")}>
           New game
         </Button>
         <Button variant="outlined" color="inherit" onClick={() => navigate(`/replays/${gameId}`)}>
           Watch replay
         </Button>
-        <Button color="inherit" onClick={onClose}>
+        <Button variant="outlined" color="inherit" onClick={onClose}>
           See board
         </Button>
       </div>
