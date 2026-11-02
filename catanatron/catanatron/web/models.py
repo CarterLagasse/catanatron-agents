@@ -1,16 +1,25 @@
-import json
 import os
 import pickle
+import re
+import zlib
 from contextlib import contextmanager
 
 from flask import abort
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, LargeBinary, MetaData, String, create_engine
+from sqlalchemy import (
+    Column,
+    Index,
+    Integer,
+    LargeBinary,
+    MetaData,
+    String,
+    create_engine,
+    func,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 
 from catanatron.game import Game
-from catanatron.json import GameEncoder
 from catanatron.state_functions import get_state_index
 
 # Using approach from: https://stackoverflow.com/questions/41004540/using-sqlalchemy-models-in-and-out-of-flask/41014157
@@ -18,24 +27,30 @@ metadata = MetaData()
 Base = declarative_base(metadata=metadata)
 
 
+def with_installed_driver(database_url: str) -> str:
+    """Names the Postgres driver we install, since SQLAlchemy's default depends on its
+    version. Other databases pass through."""
+    return re.sub(r"^postgres(ql)?://", "postgresql+psycopg2://", database_url)
+
+
 class GameState(Base):
     __tablename__ = "game_states"
+    __table_args__ = (Index("ix_game_states_uuid_state_index", "uuid", "state_index"),)
 
     id = Column(Integer, primary_key=True)
     uuid = Column(String(64), nullable=False)
     state_index = Column(Integer, nullable=False)
-    state = Column(String, nullable=False)
+    state = Column(String, nullable=False)  # Unused: only older rows hold JSON here
     pickle_data = Column(LargeBinary, nullable=False)
 
     # TODO: unique uuid and state_index
     @staticmethod
     def from_game(game: Game):
-        state = json.dumps(game, cls=GameEncoder)
-        pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
+        pickle_data = zlib.compress(pickle.dumps(game, pickle.HIGHEST_PROTOCOL))
         return GameState(
             uuid=game.id,
             state_index=get_state_index(game.state),
-            state=state,
+            state="",
             pickle_data=pickle_data,
         )
 
@@ -53,7 +68,7 @@ def database_session():
         "DATABASE_URL",
         "postgresql://catanatron:victorypoint@127.0.0.1:5432/catanatron_db",
     )
-    engine = create_engine(database_url)
+    engine = create_engine(with_installed_driver(database_url))
     session = Session(engine)
     try:
         yield session
@@ -92,4 +107,27 @@ def get_game_state(game_id, state_index=None) -> Game | None:
         if result is None:
             abort(404)
     db.session.commit()
-    return pickle.loads(result.pickle_data)  # type: ignore
+    return _load_game(result.pickle_data)
+
+
+def _load_game(data) -> Game:
+    # Rows saved before compression are plain pickles, which start with this byte.
+    if data[:1] != b"\x80":
+        data = zlib.decompress(data)
+    return pickle.loads(data)
+
+
+def delete_oldest_games(keep: int):
+    """Keeps the most recently played games, so a size-limited database never fills."""
+    stale = (
+        db.session.query(GameState.uuid)
+        .group_by(GameState.uuid)
+        .order_by(func.max(GameState.id).desc())
+        .offset(keep)
+        .all()
+    )
+    if stale:
+        db.session.query(GameState).filter(
+            GameState.uuid.in_([row.uuid for row in stale])
+        ).delete(synchronize_session=False)
+        db.session.commit()

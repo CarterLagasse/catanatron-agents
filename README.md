@@ -137,6 +137,20 @@ Watch, inspect, and play games against Catanatron via the web UI.
 The new UI opens by default. To use the previous one, pick **Classic** at the top
 of the home page or go to http://localhost:4001. Its code is in `ui-backup/`.
 
+### Public site
+
+`Dockerfile.deploy` builds the UI and game server into one app, with the trained agents
+from `agents/`, for a small host. The host deploys `main` once CI passes. These settings
+control it:
+
+| Setting                | Purpose                                              | In the image |
+| ---------------------- | ---------------------------------------------------- | ------------ |
+| `DATABASE_URL`         | Where games are saved. Set this on the host          | Not set      |
+| `SECRET_KEY`           | Flask's secret. Set this on the host                 | Not set      |
+| `CATANATRON_UI_DIST`   | Folder of the built UI to serve                      | `/app/ui-dist` |
+| `WIN_ODDS_SIMULATIONS` | Fewer make win odds faster but less precise          | 25           |
+| `MAX_SAVED_GAMES`      | Older games are deleted beyond this. 0 keeps them all | 50           |
+
 ## Python Library
 
 You can also use `catanatron` package directly which provides a core

@@ -1,7 +1,14 @@
+import pickle
 import pytest
 import json
+from pathlib import Path
 from catanatron.web import api, create_app
-from catanatron.web.models import db, GameState, get_game_state
+from catanatron.web.models import (
+    db,
+    GameState,
+    get_game_state,
+    with_installed_driver,
+)
 
 
 @pytest.fixture
@@ -242,3 +249,153 @@ def test_stress_test_endpoint(client):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data["winning_color"] is None
+
+
+@pytest.mark.parametrize(
+    "url, expected",
+    [
+        ("postgres://u:p@h/d", "postgresql+psycopg2://u:p@h/d"),
+        (
+            "postgresql://u:p@h/d?sslmode=require",
+            "postgresql+psycopg2://u:p@h/d?sslmode=require",
+        ),
+        ("postgresql+psycopg2://u:p@h/d", "postgresql+psycopg2://u:p@h/d"),
+        ("sqlite:///:memory:", "sqlite:///:memory:"),
+    ],
+)
+def test_database_urls_use_the_installed_driver(url, expected):
+    assert with_installed_driver(url) == expected
+
+
+def test_every_agent_ships_in_the_repo():
+    """A deploy only has what git tracks, so no agent may live in the ignored runs/."""
+    assert len(api.JAX_AGENTS) == 6
+    for agent in api.JAX_AGENTS.values():
+        assert agent["path"].startswith("agents/")
+        assert Path(agent["path"]).exists(), agent["path"]
+
+
+@pytest.fixture
+def game_id(client):
+    response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    return response.get_json()["game_id"]
+
+
+def test_saved_states_are_compressed(client, game_id):
+    with client.application.app_context():
+        row = db.session.query(GameState).filter_by(uuid=game_id).one()
+        assert row.state == ""
+        assert not row.pickle_data.startswith(b"\x80")
+        game = get_game_state(game_id)
+        assert len(row.pickle_data) < len(pickle.dumps(game)) / 2
+
+
+def test_games_saved_before_compression_still_load(client, game_id):
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        old_row = GameState(
+            uuid="old-game",
+            state_index=0,
+            state="{}",
+            pickle_data=pickle.dumps(game, pickle.HIGHEST_PROTOCOL),
+        )
+        db.session.add(old_row)
+        db.session.commit()
+
+    response = client.get("/api/games/old-game/states/latest")
+    assert response.status_code == 200
+    assert response.get_json()["tiles"]
+
+
+def test_only_the_newest_games_are_kept(client, monkeypatch):
+    monkeypatch.setattr(api, "MAX_SAVED_GAMES", 2)
+
+    def new_game():
+        body = {"players": ["RANDOM", "RANDOM"]}
+        return client.post("/api/games", json=body).get_json()["game_id"]
+
+    first, second = new_game(), new_game()
+    # Playing a game counts as using it, so the one left idle goes first.
+    assert client.post(f"/api/games/{first}/actions", json={}).status_code == 200
+    third = new_game()
+
+    def exists(game_id):
+        return client.get(f"/api/games/{game_id}/states/latest").status_code == 200
+
+    assert exists(first)
+    assert not exists(second)
+    assert exists(third)
+
+
+def test_saved_games_are_kept_by_default(client):
+    assert api.MAX_SAVED_GAMES == 0
+    ids = [
+        client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]}).get_json()[
+            "game_id"
+        ]
+        for _ in range(3)
+    ]
+    for game_id in ids:
+        assert client.get(f"/api/games/{game_id}/states/latest").status_code == 200
+
+
+def test_win_odds_use_the_configured_simulations(client, game_id, monkeypatch):
+    used = []
+
+    class FakeAnalyzer:
+        def __init__(self, num_simulations):
+            used.append(num_simulations)
+
+        def analyze_win_probabilities(self, game):
+            return {}
+
+    monkeypatch.setattr(api, "GameAnalyzer", FakeAnalyzer)
+    monkeypatch.setattr(api, "WIN_ODDS_SIMULATIONS", 25)
+    response = client.get(f"/api/games/{game_id}/states/latest/mcts-analysis")
+    assert response.status_code == 200
+    assert used == [25]
+
+
+@pytest.fixture
+def ui_client(tmp_path):
+    """The server with a built UI on its own address, as on the public site."""
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "app.js").write_text("console.log('app')")
+    (tmp_path / "index.html").write_text("<title>Catanatron</title>")
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "UI_DIST": str(tmp_path),
+        }
+    )
+    return app.test_client()
+
+
+def test_ui_is_served_with_its_files(ui_client):
+    assert b"Catanatron" in ui_client.get("/").data
+    assert b"console.log" in ui_client.get("/assets/app.js").data
+
+
+@pytest.mark.parametrize("route", ["/games/abc", "/games/abc/states/3", "/replays/abc"])
+def test_reloading_a_ui_route_returns_the_page(ui_client, route):
+    response = ui_client.get(route)
+    assert response.status_code == 200
+    assert b"Catanatron" in response.data
+
+
+@pytest.mark.parametrize("route", ["/api/nope", "/assets/missing.js"])
+def test_missing_files_and_api_routes_stay_errors(ui_client, route):
+    assert ui_client.get(route).status_code == 404
+
+
+def test_api_still_works_beside_the_ui(ui_client):
+    response = ui_client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    assert response.status_code == 200
+    game_id = response.get_json()["game_id"]
+    state = ui_client.get(f"/api/games/{game_id}/states/latest").get_json()
+    assert "tiles" in state
+
+
+def test_ui_is_not_served_unless_configured(client):
+    assert client.get("/games/abc").status_code == 404

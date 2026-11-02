@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import logging
+import os
 import re
 import traceback
 from pathlib import Path
@@ -15,10 +16,19 @@ from catanatron.players.minimax import AlphaBetaPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron.web.mcts_analysis import GameAnalyzer
-from catanatron.web.models import get_game_state, upsert_game_state
+from catanatron.web.models import (
+    delete_oldest_games,
+    get_game_state,
+    upsert_game_state,
+)
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 VALID_MAP_TEMPLATES = {"BASE", "MINI", "TOURNAMENT"}
+
+# Small hosts turn these down: fewer simulations make win odds faster but less precise,
+# and 0 saved games means keeping them all.
+WIN_ODDS_SIMULATIONS = int(os.environ.get("WIN_ODDS_SIMULATIONS", 100))
+MAX_SAVED_GAMES = int(os.environ.get("MAX_SAVED_GAMES", 0))
 
 # ppo_agents folder at repo root (mounted as /app/ppo_agents in docker)
 PPO_AGENTS_ROOT = Path("ppo_agents")
@@ -28,42 +38,42 @@ PPO_AGENTS_ROOT = Path("ppo_agents")
 JAX_AGENTS = {
     "psro-easy": {
         "label": "PSRO - Easy",
-        "path": "runs/levels/psro_easy_v2",
+        "path": "agents/psro-easy",
         "group": "PSRO",
         "level": "Easy",
         "win_rate": 38.5,
     },
     "psro-medium": {
         "label": "PSRO - Medium",
-        "path": "runs/psro",
+        "path": "agents/psro-medium",
         "group": "PSRO",
         "level": "Medium",
         "win_rate": 61.5,
     },
     "psro-hard": {
         "label": "PSRO - Hard",
-        "path": "runs/gpu/psro",
+        "path": "agents/psro-hard",
         "group": "PSRO",
         "level": "Hard",
         "win_rate": 74.6,
     },
     "ppo-easy": {
         "label": "PPO - Easy",
-        "path": "runs/gpu/ppo/snapshots/it_00200.npz",
+        "path": "agents/ppo-easy.npz",
         "group": "PPO",
         "level": "Easy",
         "win_rate": 32.4,
     },
     "ppo-medium": {
         "label": "PPO - Medium",
-        "path": "runs/gpu/ppo/snapshots/it_00400.npz",
+        "path": "agents/ppo-medium.npz",
         "group": "PPO",
         "level": "Medium",
         "win_rate": 50.6,
     },
     "ppo-hard": {
         "label": "PPO - Hard",
-        "path": "runs/gpu/ppo/selected.npz",
+        "path": "agents/ppo-hard.npz",
         "group": "PPO",
         "level": "Hard",
         "win_rate": 69.5,
@@ -230,6 +240,8 @@ def post_game_endpoint():
         catan_map=catan_map,
     )
     upsert_game_state(game)
+    if MAX_SAVED_GAMES:
+        delete_oldest_games(MAX_SAVED_GAMES)
     return jsonify({"game_id": game.id})
 
 
@@ -312,7 +324,7 @@ def mcts_analysis_endpoint(game_id, state_index):
             )  # Use original state_index for logging
             abort(404, description="Game state not found")
 
-        analyzer = GameAnalyzer(num_simulations=100)
+        analyzer = GameAnalyzer(num_simulations=WIN_ODDS_SIMULATIONS)
         probabilities = analyzer.analyze_win_probabilities(game)
 
         logging.info(f"Analysis successful. Probabilities: {probabilities}")

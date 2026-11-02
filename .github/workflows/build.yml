@@ -19,6 +19,8 @@ jobs:
         run: docker build ui/ -t bcollazo/catanatron-react-ui:latest
       - name: Build the Server Docker image
         run: docker build . -f Dockerfile.web -t bcollazo/catanatron-server:latest
+      - name: Build the public site Docker image
+        run: docker build . -f Dockerfile.deploy -t catanatron-deploy:latest
       # - name: Build the Paperspace Docker image
       #   run: docker build . -f Dockerfile.paperspace -t bcollazo/paperspace-rl
 

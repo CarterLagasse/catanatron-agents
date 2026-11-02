@@ -1,0 +1,21 @@
+{
+  "map_type": "BASE",
+  "iterations": 4,
+  "first_response_timesteps": 500000,
+  "response_timesteps": 500000,
+  "num_envs": 256,
+  "rollout_ticks": 128,
+  "hidden": 48,
+  "rounds": 3,
+  "phase_iterations": 5,
+  "learning_rate": 0.0005,
+  "self_fraction": 0.2,
+  "pool_segments": 4,
+  "scripted_population": [
+    "random",
+    "weighted"
+  ],
+  "eval_envs": 512,
+  "eval_ticks": 800,
+  "seed": 3
+}
