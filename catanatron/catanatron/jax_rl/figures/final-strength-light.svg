@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="370" viewBox="0 0 760 370" role="img" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<title>Win rate against F for every agent</title><desc>Engine win rates against ValueFunctionPlayer with 95% intervals, from 32% for PPO Easy to 75% for PSRO Hard.</desc>
+<rect width="760" height="370" rx="8" fill="#fcfcfb"/>
+<line x1="250.0" y1="44.0" x2="250.0" y2="320.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="250.0" y="336.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">0</text>
+<line x1="340.0" y1="44.0" x2="340.0" y2="320.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="340.0" y="336.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">20</text>
+<line x1="430.0" y1="44.0" x2="430.0" y2="320.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="430.0" y="336.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">40</text>
+<line x1="520.0" y1="44.0" x2="520.0" y2="320.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="520.0" y="336.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">60</text>
+<line x1="610.0" y1="44.0" x2="610.0" y2="320.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="610.0" y="336.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">80</text>
+<line x1="700.0" y1="44.0" x2="700.0" y2="320.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="700.0" y="336.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">100</text>
+<text x="475.0" y="356.0" fill="#52514e" font-size="12" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">Win rate vs F (%), with 95% interval</text>
+<line x1="475.0" y1="44.0" x2="475.0" y2="320.0" stroke="#c3c2b7" stroke-width="1.5" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="475.0" y="36.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">As strong as F</text>
+<text x="236.0" y="69.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">PSRO Hard: GPU PSRO, greedy</text>
+<line x1="579.3" y1="65.0" x2="591.4" y2="65.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="585.5" cy="65.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="599.4" y="69.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">74.6%</text>
+<text x="236.0" y="99.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">GPU PSRO, sampled</text>
+<line x1="574.5" y1="95.0" x2="586.8" y2="95.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="580.8" cy="95.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="594.8" y="99.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">73.5%</text>
+<text x="236.0" y="129.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">PPO Hard: GPU PPO, 200M</text>
+<line x1="556.4" y1="125.0" x2="569.2" y2="125.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="562.9" cy="125.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="577.2" y="129.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">69.5%</text>
+<text x="236.0" y="159.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">PSRO Medium: CPU PSRO</text>
+<line x1="520.0" y1="155.0" x2="533.6" y2="155.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="526.9" cy="155.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="541.6" y="159.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">61.5%</text>
+<text x="236.0" y="189.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">CPU PPO, 30M</text>
+<line x1="511.8" y1="185.0" x2="525.4" y2="185.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="518.6" cy="185.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="533.4" y="189.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">59.7%</text>
+<text x="236.0" y="219.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">PPO Medium: 13M steps</text>
+<line x1="463.8" y1="215.0" x2="491.6" y2="215.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="477.7" cy="215.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="499.6" y="219.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">50.6%</text>
+<text x="236.0" y="249.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">F against itself (control)</text>
+<line x1="459.4" y1="245.0" x2="473.3" y2="245.0" stroke="#898781" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="466.3" cy="245.0" r="4.0" fill="#898781" stroke="#fcfcfb" stroke-width="2"/>
+<text x="481.3" y="249.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">48.1%</text>
+<text x="236.0" y="279.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">PSRO Easy</text>
+<line x1="409.9" y1="275.0" x2="437.0" y2="275.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="423.2" cy="275.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="445.0" y="279.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">38.5%</text>
+<text x="236.0" y="309.0" fill="#0b0b0b" font-size="12" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">PPO Easy: 6.5M steps</text>
+<line x1="383.1" y1="305.0" x2="409.1" y2="305.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<circle cx="395.8" cy="305.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="417.1" y="309.0" fill="#52514e" font-size="11" font-weight="400" text-anchor="start">32.4%</text>
+</svg>

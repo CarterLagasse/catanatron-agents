@@ -4,14 +4,57 @@
 > Original license: GPL-3.0-or-later (preserved)  
 > This fork includes experimental RL agents, UI improvements, and additional training infrastructure.
 
+## Rule Changes in This Fork
+
+> [!IMPORTANT]
+> Games in this fork follow the official rules more closely than upstream catanatron, so
+> results are not directly comparable with upstream's or with agents trained on it.
+
+The engine's rules were checked one by one against the official 5th edition Catan Game
+Rules & Almanac. These six differed and were fixed in both the Python engine and the JAX
+training simulator:
+
+| Rule | Before | Now |
+| --- | --- | --- |
+| **Longest Road after a road is cut** | The longest remaining road took the card, even if it was under 5 roads or tied | The Almanac's special case: the holder keeps the card while still tied for longest. Otherwise, the only player with the longest road of 5+ takes it. If nobody qualifies, the card is set aside until someone does |
+| **A road ending at an opponent's settlement** | The last road, leading into the settlement, didn't count toward Longest Road | It counts. A settlement only breaks a road when it sits between two of its pieces |
+| **Building past an opponent's settlement** | After a settlement cut a loop of roads, the owner could still build onward from the far side of it | Blocked, as with any other cut |
+| **When a player wins** | Anyone reaching 10 VP won at once, even during another player's turn | You only win on your own turn. Reaching 10 VP during someone else's turn wins when your turn starts |
+| **Bank runs out of a resource** | Nobody received it | Nobody receives it if 2 or more players are owed it. A player who is the only one owed it gets whatever is left |
+| **Random number placement** | 6s and 8s could be on adjacent hexes | Re-dealt until no 6 or 8 touches another. The spiral placement already did this |
+
+How often this matters: in 400 four-player games between `ValueFunctionPlayer` bots, the
+old rule gave Longest Road to the wrong player in 54 of 198 road cuts, about 13% of games.
+In the same games there were 25 shortages with a single claimant and 15 games with a
+different road length. One player reached 10 VP during another player's turn.
+
+**Checked by:** each case is scripted in `tests/rules_scenarios.py`. `tests/test_rules.py`
+runs those scenarios in the Python engine, and `tests/jax_rl/test_parity.py` runs them in
+the JAX simulator. The parity test also checks that both implementations reassign Longest Road the same
+way after a cut. It covers every holder and cut for 3 players with road lengths of 3 to 7.
+
+**Still different on purpose:**
+- Players discard one at a time after a 7 rather than all at once.
+- A game is called a draw after 1,000 turns.
+
+**Effect on trained agents:**
+- The site's agents in `agents/` (1v1) were trained under the old rules.
+- The 4-player PSRO agent was retrained under the new ones. It was about as strong as
+  before ([PSRO4_V2.md](catanatron/catanatron/jax_rl/PSRO4_V2.md)).
+
+Earlier rule fixes came from upstream:
+- deterministic discards (#362);
+- 6s and 8s kept apart in the spiral placement (#363);
+- the Friendly Robber option (#366);
+- no building through an opponent's settlement at the end of a road (#377).
+
 ## Changes in This Fork
 
 This repository is a local fork of the original [catanatron](https://github.com/bcollazo/catanatron) with the following additions and modifications:
 
-### Experimental RL Agents (`ppo_agents/`)
-- Pre-trained PPO (Proximal Policy Optimization) models for self-play
-- Training checkpoints at various iterations (200–5000)
-- Custom reward shaping and self-play configurations
+### Trained Agents (`agents/`)
+- The PPO and PSRO agents behind the web UI's Easy, Medium and Hard opponents, trained with `jax_rl/`
+- Their strength is in the JAX [RESULTS.md](catanatron/catanatron/jax_rl/RESULTS.md)
 
 ### Enhanced Web UI (`ui/`) — **Complete Rewrite (new_interface)**
 
@@ -32,18 +75,33 @@ This repository is a local fork of the original [catanatron](https://github.com/
 - **Port/boat visualizations**: Animated harbor boats with resource-specific sails, masts, hulls, and dock planks connecting to hex corners
 - **Number tokens**: Red highlighting for 6/8, pip dots for probability visualization, flashing animation on roll
 - **Responsive layout**: Mobile-friendly homepage with proper scrolling, adaptive board scaling
-- **Component architecture**: Modular SCSS/TypeScript components (Tile, Board, ActionsToolbar, Prompt, Drawers, CostStrip)
-- **Interactive elements**: Clickable tiles, action toolbars, phase banners, left/right drawers for game state
+- **Pieces and cards**: Custom art for roads, settlements, cities and development cards
+- **Opponents**: The home page offers the classic bots and the trained PSRO and PPO agents at Easy, Medium and Hard
+- **Playing**: An action dock for building, buying and trading with the bank; a dialog for choosing discards; bot speed control; a how-to-play guide with keyboard shortcuts
+- **Side panel**: Scoreboard (opponents' hands and hidden VPs stay secret), cards left in the bank, dice roll chart, live win odds with a chart by turn, and a game log that includes discards
+- **After a game**: Rematch, game stats, a new game, the replay, or back to the board
+- **Classic UI**: The previous interface is kept in `ui-backup/`, linked from the home page
+
+The web server also lists the trained agents (`/api/jax-agents`). SB3 PPO models dropped
+into a local `ppo_agents/` folder (gitignored) appear in the player menu too.
 
 ### Gymnasium Environment Extensions (`catanatron/catanatron/gym/`)
 - New adapters and policies for RL training
-- Custom player implementations
+- `PPO` player code to load SB3 MaskablePPO models (`PPO:path.zip:vector:BASE:1`)
 - Vectorized environment support
 
 ### Pure-JAX Training (`catanatron/catanatron/jax_rl/`)
-- 1v1 game rules reimplemented in JAX and checked move by move against the Python engine
-- PPO and PSRO pipelines with no PyTorch or Stable-Baselines3 dependency
-- This is the recommended way to train; see its [README](catanatron/catanatron/jax_rl/README.md)
+- Game rules for 2 to 4 players reimplemented in JAX and checked move by move against the Python engine
+- PPO and PSRO pipelines with no PyTorch or Stable-Baselines3 dependency, trained on a GPU through WSL2
+- `JAX` player code to use a trained agent in the engine: `catanatron-play --players=JAX:agents/psro-hard,F`
+- Engine tournaments with paired confidence intervals (`python -m catanatron.jax_rl.tournament`)
+- Results: the best 1v1 agent beats `ValueFunctionPlayer` (`F`) 74.6% of the time. The 4-player PSRO agent wins 59.5% at a table with three `F` bots, and 42.3% against three JSettlers robots, where an equal player would win 25%
+- This is the recommended way to train; see its [README](catanatron/catanatron/jax_rl/README.md), [RESULTS.md](catanatron/catanatron/jax_rl/RESULTS.md), [IMPROVING.md](catanatron/catanatron/jax_rl/IMPROVING.md) and [PSRO4_V2.md](catanatron/catanatron/jax_rl/PSRO4_V2.md)
+
+### Benchmarking Against Published Agents (`catanatron/catanatron/sota/`)
+- `HM` player: the LLM-evolved HexMachina players from "Agents of Change" (arXiv:2506.04651), usable anywhere a player code is (`catanatron-play --players=HM,AB`)
+- `catanatron-jsettlers`: plays any catanatron player against the JSettlers2 robots on a real JSettlers server
+- See its [README](catanatron/catanatron/sota/README.md)
 
 ### Legacy Training Scripts (`examples/`, PyTorch + SB3)
 - `train_ppo_selfplay.py` - Self-play PPO training
@@ -51,16 +109,8 @@ This repository is a local fork of the original [catanatron](https://github.com/
 - `train_ppo_pure.py` - Pure PPO baseline
 - `universal_runner.py` - Unified training runner
 
-### Experimental Module (`catanatron_experimental/`)
-- Hyperparameter optimization (Optuna, Ray Tune, SPSA)
-- MCTS score collection utilities
-- CLI players for testing
-
-### Game Logic Fixes
-- Deterministic discard handling
-- Road/ship building validation
-- Friendly robber game option
-- Block road extension through opponent settlements
+### Game Rules
+- Six rules corrected to match the official rules; see [Rule Changes in This Fork](#rule-changes-in-this-fork)
 
 ---
 
@@ -79,8 +129,8 @@ Catanatron provides a `catanatron-play` CLI tool to run large scale simulations.
 1. Clone the repository:
 
    ```bash
-   git clone git@github.com:bcollazo/catanatron.git
-   cd catanatron/
+   git clone https://github.com/CarterLagasse/catanatron-agents.git
+   cd catanatron-agents/
    ```
 
 2. Create a virtual environment (requires Python 3.11 or higher)
@@ -102,6 +152,8 @@ Catanatron provides a `catanatron-play` CLI tool to run large scale simulations.
    ```bash
    pip install -e ".[web,gym,dev]"
    ```
+
+   For this fork's trained agents and JAX training, also install `".[jax]"`.
 
 ### Usage
 

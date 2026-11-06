@@ -4,13 +4,13 @@ The tables are derived from the Python engine's map templates, so node, edge and
 tile ids always agree with `catanatron.models.map`. Everything here is plain
 NumPy computed once; the jitted code only ever closes over the resulting arrays.
 
-Action space (1v1). It is ego-centric, so one network can play either seat:
+Action space. It is ego-centric, so one network can play any seat:
 
     ROLL, END_TURN, BUY_DEV, PLAY_KNIGHT, PLAY_ROAD_BUILDING
     DISCARD[resource]
     ROAD[edge], SETTLEMENT[node], CITY[node]
     YEAR_OF_PLENTY[15 pairs, then 5 single cards], MONOPOLY[resource]
-    ROBBER[tile, no-steal | steal-from-opponent]
+    ROBBER[tile, no-steal | steal from the opponent 1..P-1 seats after the mover]
     MARITIME[give, get]: the rate is always the player's best one, since the
     Python move generator only ever offers that rate.
 """
@@ -89,6 +89,7 @@ class Topology:
     fixed_tile_resource: np.ndarray | None  # set for fixed maps (TOURNAMENT)
     fixed_tile_number: np.ndarray | None
     fixed_port_resource: np.ndarray | None
+    num_players: int = 2
 
     # Action layout
     ROLL: int = 0
@@ -124,7 +125,7 @@ class Topology:
 
     @property
     def MARITIME(self):
-        return self.ROBBER + 2 * self.num_tiles
+        return self.ROBBER + self.num_players * self.num_tiles
 
     @property
     def num_actions(self):
@@ -148,8 +149,9 @@ def _template_port_order(tiles):
 
 
 @lru_cache(maxsize=None)
-def get_topology(map_type="BASE"):
-    """Builds tables for "BASE", "TOURNAMENT" or "MINI"."""
+def get_topology(map_type="BASE", num_players=2):
+    """Builds tables for "BASE", "TOURNAMENT" or "MINI" with 2 to 4 players."""
+    assert 2 <= num_players <= 4, "the engine supports 2 to 4 players"
     template = MINI_MAP_TEMPLATE if map_type == "MINI" else BASE_MAP_TEMPLATE
     tiles = initialize_tiles(template)
     land = [t for t in tiles.values() if isinstance(t, LandTile)]
@@ -227,4 +229,5 @@ def get_topology(map_type="BASE"):
         fixed_tile_resource=fixed_resource,
         fixed_tile_number=fixed_number,
         fixed_port_resource=fixed_port,
+        num_players=num_players,
     )

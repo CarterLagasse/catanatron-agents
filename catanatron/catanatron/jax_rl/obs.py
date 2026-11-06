@@ -1,9 +1,15 @@
 """Ego-centric observations for the graph network.
 
 Everything is from `seat`'s point of view and exposes only what that player can
-legally know: the opponent's hand and dev cards appear as counts, and the deck as
-its size. Any seat can be encoded at any time, which lets the value of a position
-be estimated for a player who is not the one to move.
+legally know: opponents' hands and dev cards appear as counts, and the deck as its
+size. Any seat can be encoded at any time, which lets the value of a position be
+estimated for a player who is not the one to move.
+
+Opponents are numbered by how many seats after `seat` they sit. The base features
+are the 1v1 ones. With more players, board features in them ("an opponent's
+settlement") cover every opponent, global ones describe opponent 1, and one block per
+opponent is appended to each entity's features. Appending keeps 1v1 checkpoints
+usable as a starting point for more players (see network.adapt_params).
 """
 
 from typing import NamedTuple
@@ -51,11 +57,43 @@ GLOBAL_FEATURES = (
     + 2
 )
 
+# Appended per opponent when there are more than 2 players
+NODE_FEATURES_PER_OPPONENT = 3
+EDGE_FEATURES_PER_OPPONENT = 1
+TILE_FEATURES_PER_OPPONENT = 1
+GLOBAL_FEATURES_PER_OPPONENT = 15
+GLOBAL_FEATURES_MULTIPLAYER = 2
+
+
+def feature_sizes(num_players=2):
+    """(node, edge, tile, global) feature counts for a number of players."""
+    if num_players == 2:
+        return NODE_FEATURES, EDGE_FEATURES, TILE_FEATURES, GLOBAL_FEATURES
+    opponents = num_players - 1
+    return (
+        NODE_FEATURES + NODE_FEATURES_PER_OPPONENT * opponents,
+        EDGE_FEATURES + EDGE_FEATURES_PER_OPPONENT * opponents,
+        TILE_FEATURES + TILE_FEATURES_PER_OPPONENT * opponents,
+        GLOBAL_FEATURES
+        + GLOBAL_FEATURES_PER_OPPONENT * opponents
+        + GLOBAL_FEATURES_MULTIPLAYER,
+    )
+
 
 def encode(env, s, seat):
     """Observation of a single game, from `seat`'s perspective."""
-    other = 1 - seat
+    players = env.num_players
+    opponents = env.opponents(seat)  # [P - 1]
+    other = opponents[0]
     node_owner, node_level = s.node_owner, s.node_level
+    if players == 2:
+        them_here = node_owner == other
+        their_reach = s.reach[other]
+        their_roads = s.edge_owner == other
+    else:
+        them_here = (node_owner >= 0) & (node_owner != seat)
+        their_reach = s.reach[opponents].any(axis=0)
+        their_roads = (s.edge_owner >= 0) & (s.edge_owner != seat)
 
     # ----- Tiles
     tile_probability = DICE_PROBABILITY[s.tile_number]
@@ -95,7 +133,6 @@ def encode(env, s, seat):
         )
 
     me_here = node_owner == seat
-    them_here = node_owner == other
     nodes = jnp.concatenate(
         [
             jnp.stack(
@@ -106,7 +143,7 @@ def encode(env, s, seat):
                     them_here & (node_level == 2),
                     env._free_nodes(node_owner),
                     s.reach[seat],
-                    s.reach[other],
+                    their_reach,
                 ],
                 axis=1,
             ).astype(jnp.float32),
@@ -121,7 +158,7 @@ def encode(env, s, seat):
     edges = jnp.stack(
         [
             s.edge_owner == seat,
-            s.edge_owner == other,
+            their_roads,
             env._buildable_edges(s.edge_owner, s.reach[seat]),
         ],
         axis=1,
@@ -193,6 +230,55 @@ def encode(env, s, seat):
             ),
         ]
     ).astype(jnp.float32)
+
+    if players > 2:
+        owner = node_owner[:, None] == opponents  # [N, P - 1]
+        nodes = jnp.concatenate(
+            [
+                nodes,
+                (owner & (node_level == 1)[:, None]).astype(jnp.float32),
+                (owner & (node_level == 2)[:, None]).astype(jnp.float32),
+                s.reach[opponents].T.astype(jnp.float32),
+            ],
+            axis=1,
+        )
+        edges = jnp.concatenate(
+            [edges, (s.edge_owner[:, None] == opponents).astype(jnp.float32)], axis=1
+        )
+        on_tile = (node_owner[env.tile_nodes][:, :, None] == opponents).any(axis=1)
+        tiles = jnp.concatenate([tiles, on_tile.astype(jnp.float32)], axis=1)
+
+        def opponent_features(k):
+            return jnp.stack(
+                [
+                    (s.turn_player == k).astype(jnp.float32),
+                    (s.current == k).astype(jnp.float32),
+                    s.hand[k].sum() / 10.0,
+                    s.dev_hand[k].sum() / 3.0,
+                    s.vp_public[k] / 10.0,
+                    (s.vp_public[seat] - s.vp_public[k]) / 5.0,
+                    s.dev_played[k, KNIGHT] / 3.0,
+                    s.road_length[k] / 5.0,
+                    (s.road_holder == k).astype(jnp.float32),
+                    (s.army_holder == k).astype(jnp.float32),
+                    s.roads_left[k] / 15.0,
+                    s.settlements_left[k] / 5.0,
+                    s.cities_left[k] / 4.0,
+                    production_of(k).sum() * 2.0,
+                    s.discard_counts[k] / 5.0,
+                ]
+            ).astype(jnp.float32)
+
+        leader = s.vp_public[opponents].max()
+        globals_ = jnp.concatenate(
+            [
+                globals_,
+                jax.vmap(opponent_features)(opponents).ravel(),
+                jnp.stack([leader / 10.0, (s.vp_public[seat] - leader) / 5.0]).astype(
+                    jnp.float32
+                ),
+            ]
+        )
 
     return Obs(nodes=nodes, edges=edges, tiles=tiles, globals=globals_)
 

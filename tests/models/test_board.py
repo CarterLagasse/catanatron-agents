@@ -357,3 +357,25 @@ def test_many_buildings():
 
 
 # TODO: Test super long road, cut at many places, to yield 5+ component graph
+
+
+def test_settlement_blocks_road_end_in_every_copy_of_a_component():
+    board = Board()
+    # Red: a loop of roads around the center tile, plus a spur to node 6
+    board.build_settlement(Color.RED, 0, initial_build_phase=True)
+    for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 0), (1, 6)]:
+        board.build_road(Color.RED, edge)
+    # Blue cuts the loop at 3; both sides walk round the loop to the same nodes.
+    board.build_settlement(Color.BLUE, 11, initial_build_phase=True)
+    board.build_road(Color.BLUE, (11, 12))
+    board.build_road(Color.BLUE, (12, 3))
+    board.build_settlement(Color.BLUE, 3)
+    # White settles on the end of red's spur.
+    board.build_settlement(Color.WHITE, 24, initial_build_phase=True)
+    board.build_road(Color.WHITE, (24, 7))
+    board.build_road(Color.WHITE, (7, 6))
+    board.build_settlement(Color.WHITE, 6)
+
+    assert all(6 not in component for component in board.connected_components[Color.RED])
+    # Red can't build onward from behind white's settlement.
+    assert not any(6 in edge for edge in board.buildable_edges(Color.RED))

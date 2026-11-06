@@ -1,16 +1,24 @@
-"""Policy-Space Response Oracles for 1v1 Catan, in pure JAX.
+"""Policy-Space Response Oracles for 2- to 4-player Catan, in pure JAX.
 
 Each iteration:
     1. Solve the empirical game: find the Nash mixture over the current population.
     2. Train a best response against that mixture, warm started from the previous one.
     3. Add the response to the population and fill in its row of the payoff matrix.
 
-The game is symmetric and zero-sum once seats are randomized, so the payoff matrix
-is antisymmetric and one mixture describes both players. The BR's score against
-the mixture estimates how exploitable the mixture still is.
+payoffs[i, j] is member i's mean reward in one seat with member j in every other
+seat (+1 a win, -1/(P-1) a loss). In 1v1 the game is symmetric and zero-sum once
+seats are randomized, so the matrix is antisymmetric and one mixture describes both
+players. With more players payoffs[i, j] and payoffs[j, i] are separate matches, and
+the meta-game is the antisymmetric part (payoffs - payoffs.T) / 2: i ranks above j
+when i does better against a table of j than j does against a table of i. In 1v1
+that is the payoff matrix itself. Responses train against tables drawn from the
+mixture, one member per table. The BR's score against the mixture estimates how
+exploitable the mixture still is.
 
 Train:
     python -m catanatron.jax_rl.psro --run-dir runs/psro --iterations 12
+    python -m catanatron.jax_rl.psro --run-dir runs/psro4 --num-players 4 \
+        --init-from runs/gpu/ppo/selected.npz
 """
 
 import argparse
@@ -27,7 +35,7 @@ import numpy as np
 from catanatron.jax_rl import checkpoint
 from catanatron.jax_rl.bots import SCRIPTED_NAMES
 from catanatron.jax_rl.evaluate import Arena
-from catanatron.jax_rl.ppo import PPOConfig, Trainer, reset_pool_games
+from catanatron.jax_rl.ppo import PPOConfig, Trainer, load_init_params, reset_pool_games
 
 
 @partial(jax.jit, static_argnames=("iterations",))
@@ -68,6 +76,7 @@ def exploitability(payoffs, strategy):
 @dataclass(frozen=True)
 class PSROConfig:
     map_type: str = "BASE"
+    num_players: int = 2
     iterations: int = 12
     # Timesteps of each best response. The first starts from nothing, so it gets more.
     first_response_timesteps: int = 8_000_000
@@ -101,13 +110,20 @@ class Population:
     def __len__(self):
         return len(self.names)
 
-    def add(self, name, kind, params, row):
-        """row[i] is the new member's payoff against member i."""
+    def meta_payoffs(self):
+        """The antisymmetric game the meta-solver works on (see the module docs)."""
+        return (self.payoffs - self.payoffs.T) / 2.0
+
+    def add(self, name, kind, params, row, column=None):
+        """row[i] is the new member's payoff against a table of member i, and
+        column[i] member i's payoff against a table of the new member. In 1v1 the
+        column is -row and can be left out."""
         size = len(self)
+        column = -np.asarray(row) if column is None else np.asarray(column)
         payoffs = np.zeros((size + 1, size + 1), np.float64)
         payoffs[:size, :size] = self.payoffs
         payoffs[size, :size] = row
-        payoffs[:size, size] = -np.asarray(row)
+        payoffs[:size, size] = column
         self.payoffs = payoffs
         self.names.append(name)
         self.kinds.append(kind)
@@ -124,34 +140,46 @@ class Population:
             "hidden": config.hidden,
             "rounds": config.rounds,
             "map_type": config.map_type,
+            "num_players": config.num_players,
         }
         temporary = run_dir / "population.tmp.json"
         temporary.write_text(json.dumps(data, indent=1))
         checkpoint.replace_file(temporary, run_dir / "population.json")
 
 
+def _bot_name(kind):
+    return next(n for n, v in SCRIPTED_NAMES.items() if v == kind)
+
+
+def _match(arena, kind_a, params_a, kind_b, params_b, key):
+    """Payoff of A in one seat against B in every other seat."""
+    if kind_a < 0 and kind_b < 0:
+        return arena.against_network(key, params_a, params_b)["payoff"]
+    if kind_a < 0:
+        return arena.against_scripted(key, params_a, _bot_name(kind_b))["payoff"]
+    if kind_b < 0:
+        if arena.env.num_players == 2:  # zero-sum: reuse the network's match
+            return -arena.against_scripted(key, params_b, _bot_name(kind_a))["payoff"]
+        return arena.scripted_against(key, _bot_name(kind_a), params_b)["payoff"]
+    return _scripted_vs_scripted(arena, kind_a, kind_b, key)
+
+
 def evaluate_member(arena, population, kind, params, key):
-    """Payoff of a new member against everyone already in the population."""
-    row = []
-    for member_kind, member_params, name in zip(
-        population.kinds, population.params, population.names
-    ):
-        key, k_match = jax.random.split(key)
-        if kind < 0 and member_kind < 0:
-            result = arena.against_network(k_match, params, member_params)
-        elif kind < 0:
-            bot = next(n for n, v in SCRIPTED_NAMES.items() if v == member_kind)
-            result = arena.against_scripted(k_match, params, bot)
-        elif member_kind < 0:
-            bot = next(n for n, v in SCRIPTED_NAMES.items() if v == kind)
-            result = arena.against_scripted(k_match, member_params, bot)
-            result["payoff"] = -result["payoff"]
-        else:
-            result = {
-                "payoff": _scripted_vs_scripted(arena, kind, member_kind, k_match)
-            }
-        row.append(result["payoff"])
-    return row
+    """Payoff of a new member against a table of each member already in the
+    population. With more than 2 players, also returns each member's payoff
+    against a table of the new member; in 1v1 that column is None."""
+    multiplayer = arena.env.num_players > 2
+    row, column = [], []
+    for member_kind, member_params in zip(population.kinds, population.params):
+        if multiplayer:
+            key, k_row, k_column = jax.random.split(key, 3)
+            column.append(
+                _match(arena, member_kind, member_params, kind, params, k_column)
+            )
+        else:  # the 1v1 key sequence, so old runs reproduce
+            key, k_row = jax.random.split(key)
+        row.append(_match(arena, kind, params, member_kind, member_params, k_row))
+    return row, (column if multiplayer else None)
 
 
 def _scripted_vs_scripted(arena, kind_a, kind_b, key):
@@ -160,14 +188,14 @@ def _scripted_vs_scripted(arena, kind_a, kind_b, key):
     counts = jax.jit(
         lambda k: arena._play(k, scripted_policy(kind_a), scripted_policy(kind_b))
     )(key)
-    wins, losses, draws = (int(x) for x in counts)
-    return (wins - losses) / max(wins + losses + draws, 1)
+    return arena._summary(counts)["payoff"]
 
 
 def _response_config(config, timesteps, seed):
     pool_fraction = 1.0 - config.self_fraction
     return PPOConfig(
         map_type=config.map_type,
+        num_players=config.num_players,
         num_envs=config.num_envs,
         rollout_ticks=config.rollout_ticks,
         pool_fraction=pool_fraction,
@@ -284,22 +312,23 @@ def train(config, run_dir, log=print, init_params=None, resume=False, max_hours=
         for name in config.scripted_population:
             key, k_eval = jax.random.split(key)
             kind = SCRIPTED_NAMES[name]
-            row = evaluate_member(arena, population, kind, None, k_eval)
-            population.add(name, kind, None, row)
+            row, column = evaluate_member(arena, population, kind, None, k_eval)
+            population.add(name, kind, None, row, column)
         if init_params is not None:
             key, k_eval = jax.random.split(key)
             frozen = jax.tree_util.tree_map(np.asarray, init_params)
-            row = evaluate_member(arena, population, -1, frozen, k_eval)
-            population.add("init", -1, frozen, row)
+            row, column = evaluate_member(arena, population, -1, frozen, k_eval)
+            population.add("init", -1, frozen, row, column)
             checkpoint.save_params(
                 run_dir / "init.npz",
                 frozen,
                 config.hidden,
                 config.rounds,
                 config.map_type,
+                config.num_players,
             )
             log(f"init payoffs {np.round(row, 2).tolist()}")
-        population.save(run_dir, config, solve_meta(population.payoffs), history)
+        population.save(run_dir, config, solve_meta(population.meta_payoffs()), history)
 
     for iteration in range(len(history), config.iterations):
         if max_hours is not None and history:
@@ -308,7 +337,7 @@ def train(config, run_dir, log=print, init_params=None, resume=False, max_hours=
                 log(f"PSRO: stopping before response {iteration}, time budget reached")
                 break
         started = time.time()
-        strategy = solve_meta(population.payoffs)
+        strategy = solve_meta(population.meta_payoffs())
         mixture = {
             n: round(float(w), 3) for n, w in zip(population.names, strategy) if w > 0
         }
@@ -321,26 +350,27 @@ def train(config, run_dir, log=print, init_params=None, resume=False, max_hours=
         )
         frozen = jax.tree_util.tree_map(np.asarray, params)
 
-        row = evaluate_member(arena, population, -1, frozen, k_eval)
+        row, column = evaluate_member(arena, population, -1, frozen, k_eval)
         response_value = float(np.dot(row, strategy))
         name = f"br_{iteration:02d}"
-        population.add(name, -1, frozen, row)
+        population.add(name, -1, frozen, row, column)
         checkpoint.save_params(
             run_dir / f"{name}.npz",
             frozen,
             config.hidden,
             config.rounds,
             config.map_type,
+            config.num_players,
         )
 
-        strategy = solve_meta(population.payoffs)
+        strategy = solve_meta(population.meta_payoffs())
         history.append(
             {
                 "iteration": iteration,
                 # > 0 means the old mixture could still be exploited.
                 "response_vs_previous_mixture": response_value,
                 "exploitability_within_population": exploitability(
-                    population.payoffs, strategy
+                    population.meta_payoffs(), strategy
                 ),
                 "seconds": time.time() - started,
             }
@@ -359,6 +389,13 @@ def main():
     parser.add_argument("--run-dir", default="runs/psro")
     parser.add_argument(
         "--map-type", default="BASE", choices=["BASE", "MINI", "TOURNAMENT"]
+    )
+    parser.add_argument(
+        "--num-players",
+        type=int,
+        default=PSROConfig.num_players,
+        choices=[2, 3, 4],
+        help="players per game; 4 matches the JSettlers benchmark",
     )
     parser.add_argument("--iterations", type=int, default=PSROConfig.iterations)
     parser.add_argument(
@@ -379,13 +416,22 @@ def main():
         help="more means less noisy payoffs",
     )
     parser.add_argument(
+        "--eval-ticks",
+        type=int,
+        default=PSROConfig.eval_ticks,
+        help="plies per payoff match; games still running at the end are not counted, "
+        "so raise it for longer games such as 4-player ones",
+    )
+    parser.add_argument(
         "--scripted-population",
         default=",".join(PSROConfig.scripted_population),
         help="scripted bots in the population. Leave out any that weak networks cannot beat, "
         "or the mixture ends up playing the bot and not a network",
     )
     parser.add_argument(
-        "--init-from", default=None, help="checkpoint to warm start from"
+        "--init-from",
+        default=None,
+        help="checkpoint to warm start from; a 1v1 one is widened for more players",
     )
     parser.add_argument(
         "--resume", action="store_true", help="continue the run in --run-dir"
@@ -396,6 +442,7 @@ def main():
     config = replace(
         PSROConfig(),
         map_type=args.map_type,
+        num_players=args.num_players,
         iterations=args.iterations,
         first_response_timesteps=args.first_response_timesteps,
         response_timesteps=args.response_timesteps,
@@ -403,10 +450,13 @@ def main():
         hidden=args.hidden,
         rounds=args.rounds,
         eval_envs=args.eval_envs,
+        eval_ticks=args.eval_ticks,
         scripted_population=tuple(args.scripted_population.split(",")),
         seed=args.seed,
     )
-    init_params = checkpoint.load_params(args.init_from)[0] if args.init_from else None
+    init_params = (
+        load_init_params(args.init_from, config.num_players) if args.init_from else None
+    )
     train(
         config,
         args.run_dir,

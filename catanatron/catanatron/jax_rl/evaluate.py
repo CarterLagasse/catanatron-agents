@@ -43,13 +43,20 @@ class Arena:
         self.ticks = ticks
         self._vs_network = jax.jit(self._match_network)
         self._vs_scripted = jax.jit(self._match_scripted, static_argnames=("greedy",))
+        self._scripted_vs = jax.jit(self._match_scripted_first)
+
+    def _random_seats(self, key, shape):
+        if self.env.num_players == 2:  # the 1v1 draws, so old results reproduce
+            return jax.random.bernoulli(key, 0.5, shape).astype(jnp.int32)
+        return jax.random.randint(key, shape, 0, self.env.num_players)
 
     def _play(self, key, act_a, act_b):
-        """Policy A takes a random seat in each game. Returns counters from A's side."""
+        """Policy A takes a random seat in each game and B plays every other seat.
+        Returns counters from A's side."""
         env = self.env
         k_reset, k_seat, k_loop = jax.random.split(key, 3)
         states = env.batch_reset(k_reset, self.num_envs)
-        seat_a = jax.random.bernoulli(k_seat, 0.5, (self.num_envs,)).astype(jnp.int32)
+        seat_a = self._random_seats(k_seat, (self.num_envs,))
 
         def tick(carry, key):
             states, seat_a = carry
@@ -64,9 +71,7 @@ class Arena:
             won = info.done & (info.winner == seat_a)
             lost = info.done & (info.winner >= 0) & (info.winner != seat_a)
             drew = info.done & (info.winner < 0)
-            new_seats = jax.random.bernoulli(k_seat, 0.5, seat_a.shape).astype(
-                jnp.int32
-            )
+            new_seats = self._random_seats(k_seat, seat_a.shape)
             seat_a = jnp.where(info.done, new_seats, seat_a)
             counts = jnp.stack([won.sum(), lost.sum(), drew.sum()])
             return (states, seat_a), counts
@@ -90,17 +95,23 @@ class Arena:
             scripted_policy(kind),
         )
 
-    @staticmethod
-    def _summary(counts):
+    def _match_scripted_first(self, key, kind, params):
+        return self._play(
+            key, scripted_policy(kind), network_policy(self.policy, params)
+        )
+
+    def _summary(self, counts):
+        """payoff is A's mean reward: +1 a win, -1/(P-1) a loss, so 0 for equals."""
         wins, losses, draws = (int(x) for x in counts)
         games = wins + losses + draws
+        loss = 1.0 / (self.env.num_players - 1)
         return {
             "wins": wins,
             "losses": losses,
             "draws": draws,
             "games": games,
             "win_rate": wins / games if games else 0.0,
-            "payoff": (wins - losses) / games if games else 0.0,
+            "payoff": (wins - loss * losses) / games if games else 0.0,
         }
 
     def against_scripted(self, key, params, name, greedy=False):
@@ -109,3 +120,8 @@ class Arena:
 
     def against_network(self, key, params_a, params_b):
         return self._summary(self._vs_network(key, params_a, params_b))
+
+    def scripted_against(self, key, name, params):
+        """The scripted bot in one seat, the network in every other seat."""
+        kind = jnp.asarray(SCRIPTED_NAMES[name], jnp.int32)
+        return self._summary(self._scripted_vs(key, kind, params))

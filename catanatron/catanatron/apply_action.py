@@ -13,6 +13,7 @@ from catanatron.models.decks import (
     freqdeck_add,
     freqdeck_can_draw,
     freqdeck_contains,
+    freqdeck_count,
     freqdeck_draw,
     freqdeck_from_listdeck,
     freqdeck_replenish,
@@ -571,8 +572,13 @@ def yield_resources(board: Board, resource_freqdeck, number):
         total = resource_totals[resource]
         if not freqdeck_can_draw(resource_freqdeck, total, resource):
             depleted.append(resource)
+    claimants = {
+        resource: sum(1 for p in intented_payout.values() if p[resource] > 0)
+        for resource in depleted
+    }
 
-    # build final data color => freqdeck structure
+    # build final data color => freqdeck structure. A resource the bank can't
+    # fully pay goes to nobody, unless only 1 player is owed it: they get the rest.
     payout = {}
     for player, player_payout in intented_payout.items():
         payout[player] = [0, 0, 0, 0, 0]
@@ -580,6 +586,9 @@ def yield_resources(board: Board, resource_freqdeck, number):
         for resource, count in player_payout.items():
             if resource not in depleted:
                 freqdeck_replenish(payout[player], count, resource)
+            elif claimants[resource] == 1:
+                left = freqdeck_count(resource_freqdeck, resource)
+                freqdeck_replenish(payout[player], min(count, left), resource)
 
     return payout, depleted
 

@@ -5,8 +5,13 @@ JaxPlayer works anywhere a Player does, including the CLI:
 A PSRO run directory plays its Nash mixture, drawing one member per game:
     catanatron-play --players=JAX:runs/psro,F --num=100
 
-Benchmark against the engine's bots, using several processes:
+An agent trained for more players plays games of that size only:
+    catanatron-play --players=JAX:runs/psro4,F,F,F --num=100
+
+Benchmark against the engine's bots, using several processes. With more than 2
+players, every other seat plays the opponent:
     python -m catanatron.jax_rl.jax_player --agent runs/ppo/best.npz --opponents R,W,F,AB:2 --games 200
+    python -m catanatron.jax_rl.jax_player --agent runs/psro4 --num-players 4 --opponents F
 """
 
 import argparse
@@ -39,7 +44,8 @@ class _Model:
         self.members = [params for _, params in members]
         self.member_kinds = [kind for kind, _ in members]
         self.weights = np.array(meta["weights"], np.float64)
-        self.env = env = CatanEnv(meta["map_type"])
+        self.num_players = meta["num_players"]
+        self.env = env = CatanEnv(meta["map_type"], num_players=self.num_players)
         self.codec = ActionCodec(env.topo)
         policy = GraphPolicy(env, meta["hidden"], meta["rounds"])
 
@@ -50,6 +56,11 @@ class _Model:
         scripted = jax.jit(lambda state, kind: scripted_logits(env, state, kind))
 
         def logits(game, active):
+            if len(game.state.colors) != self.num_players:
+                raise ValueError(
+                    f"{path} was trained for {self.num_players}-player games, "
+                    f"not {len(game.state.colors)}-player ones"
+                )
             batched = state_from_game(game, env.topo)
             state = jax.tree_util.tree_map(lambda x: x[0], batched)
             kind = self.member_kinds[active]
@@ -97,7 +108,9 @@ class JaxPlayer(Player):
             self._active = self._rng.choice(len(model.members), p=model.weights)
 
         logits = model.logits(game, self._active)
-        choices = [model.codec.encode(a) for a in playable_actions]
+        choices = [
+            model.codec.encode(a, game.state.color_to_index) for a in playable_actions
+        ]
         scores = logits[choices]
         if self.greedy:
             return playable_actions[int(scores.argmax())]
@@ -130,6 +143,7 @@ def _load_members(path, checkpoint):
             "hidden": data["hidden"],
             "rounds": data["rounds"],
             "map_type": data["map_type"],
+            "num_players": data.get("num_players", 2),
         }
     params, meta = checkpoint.load_params(path)
     meta["weights"] = [1.0]
@@ -147,26 +161,35 @@ def _build_agent(spec, greedy):
     return JaxPlayer(Color.BLUE, spec, greedy=greedy)
 
 
+# Opponent colors; the agent plays BLUE
+OPPONENT_COLORS = [Color.RED, Color.ORANGE, Color.WHITE]
+
+
 def _play_games(args):
     """Returns one record per game. Everything random follows from the game's seed,
     so two agents given the same seeds face the same boards and can be paired."""
-    agent_path, greedy, opponent_spec, seeds, map_type = args
+    agent_path, greedy, opponent_spec, seeds, map_type, *rest = args
+    num_players = rest[0] if rest else 2
     os.environ.setdefault("JAX_PLATFORMS", "cpu")
     from catanatron.cli.cli_players import parse_cli_string
     from catanatron.game import Game
     from catanatron.models.map import build_map
 
     agent = _build_agent(agent_path, greedy)
-    opponent = parse_cli_string(opponent_spec)[0]
-    opponent.color = Color.RED
+    opponents = []
+    for color in OPPONENT_COLORS[: num_players - 1]:
+        opponent = parse_cli_string(opponent_spec)[0]
+        opponent.color = color
+        opponents.append(opponent)
+    players = [agent] + opponents
     records = []
     for game_seed in seeds:
         random.seed(game_seed)
-        for offset, player in enumerate((agent, opponent)):
+        for offset, player in enumerate(players):
             if isinstance(player, JaxPlayer):
                 player._rng = np.random.default_rng([game_seed, offset])
                 player._game_id = None
-        game = Game([agent, opponent], seed=game_seed, catan_map=build_map(map_type))
+        game = Game(players, seed=game_seed, catan_map=build_map(map_type))
         winner = game.play()
         seat = game.state.color_to_index[Color.BLUE]
         records.append(
@@ -207,7 +230,7 @@ def summarize(records):
     losses = sum(r["result"] == "loss" for r in records)
     low, high = wilson_interval(wins, total)
     seats = {}
-    for seat in (0, 1):
+    for seat in range(max([1] + [r["seat"] for r in records]) + 1):
         played = [r for r in records if r["seat"] == seat]
         seats[f"seat{seat}_games"] = len(played)
         seats[f"seat{seat}_win_rate"] = (
@@ -236,6 +259,7 @@ def play_match(
     seed=0,
     records_path=None,
     chunk=25,
+    num_players=2,
 ):
     """Plays seeds seed..seed+games-1. With records_path, finished games are kept
     in a JSON-lines file and a rerun plays only the seeds still missing."""
@@ -247,7 +271,7 @@ def play_match(
     finished = {r["seed"] for r in records}
     missing = [s for s in range(seed, seed + games) if s not in finished]
     jobs = [
-        (agent, greedy, opponent, missing[i : i + chunk], map_type)
+        (agent, greedy, opponent, missing[i : i + chunk], map_type, num_players)
         for i in range(0, len(missing), chunk)
     ]
     for batch in pool.imap_unordered(_play_games, jobs):
@@ -260,7 +284,14 @@ def play_match(
 
 
 def benchmark(
-    agent_path, opponents, games, workers, greedy=False, map_type="BASE", seed=0
+    agent_path,
+    opponents,
+    games,
+    workers,
+    greedy=False,
+    map_type="BASE",
+    seed=0,
+    num_players=2,
 ):
     """Returns {opponent: result}, playing `games` real engine games per opponent."""
     import multiprocessing
@@ -268,7 +299,16 @@ def benchmark(
     with multiprocessing.get_context("spawn").Pool(workers) as pool:
         return {
             spec: summarize(
-                play_match(agent_path, spec, games, pool, greedy, map_type, seed)
+                play_match(
+                    agent_path,
+                    spec,
+                    games,
+                    pool,
+                    greedy,
+                    map_type,
+                    seed,
+                    num_players=num_players,
+                )
             )
             for spec in opponents
         }
@@ -282,6 +322,13 @@ def main():
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--greedy", action="store_true")
     parser.add_argument("--map-type", default="BASE")
+    parser.add_argument(
+        "--num-players",
+        type=int,
+        default=2,
+        choices=[2, 3, 4],
+        help="must match what the agent was trained for",
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
         "--output", default=None, help="write results to this JSON file"
@@ -295,6 +342,7 @@ def main():
         args.greedy,
         args.map_type,
         args.seed,
+        args.num_players,
     )
     for spec, r in results.items():
         print(

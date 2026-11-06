@@ -139,14 +139,14 @@ class Board:
                             for component in self.connected_components[edge_color]
                         ]
                     )
-                    self.road_color, self.road_length = max(
-                        self.road_lengths.items(), key=lambda e: e[1]
-                    )
+                    self._reassign_longest_road_after_cut()
                 elif len(edges) == 1:
-                    # Endpoint blocked: remove node_id from opponent's component
-                    b_index = self._get_connected_component_index(node_id, edge_color)
-                    if b_index is not None:
-                        self.connected_components[edge_color][b_index].discard(node_id)
+                    # Endpoint blocked: remove node_id from the opponent's components.
+                    # A cut through a loop of roads leaves two copies of the same
+                    # component, so every copy must lose it, or roads could still be
+                    # built onward from behind this settlement.
+                    for component in self.connected_components[edge_color]:
+                        component.discard(node_id)
 
         self.board_buildable_ids.discard(node_id)
         for n in STATIC_GRAPH.neighbors(node_id):
@@ -155,6 +155,21 @@ class Board:
         self.buildable_edges_cache = {}  # Reset buildable_edges
         self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
+
+    def _reassign_longest_road_after_cut(self):
+        """The Almanac's special case for a broken road: the holder keeps the card
+        while still tied for the longest road. Otherwise it goes to the only player
+        with the longest road of 5+, or is set aside (no holder) until there is one.
+        road_length stays the length to beat to take the card."""
+        best = max(self.road_lengths.values(), default=0)
+        leaders = [
+            color for color, length in self.road_lengths.items() if length == best
+        ]
+        if best < 5:
+            self.road_color = None
+        elif self.road_color not in leaders:
+            self.road_color = leaders[0] if len(leaders) == 1 else None
+        self.road_length = best
 
     def dfs_walk(self, node_id, color):
         """Generates set of nodes that are "connected" to given node.
@@ -361,15 +376,14 @@ def longest_acyclic_path(board: Board, node_set: set[int], color: Color):
             node, path_thus_far = agenda.pop()
 
             able_to_navigate = False
-            for neighbor_node in STATIC_GRAPH.neighbors(node):
+            # An enemy building ends the road: the road into it counts, but the
+            # path can't continue through it (unless it starts there).
+            stopped = len(path_thus_far) > 0 and board.is_enemy_node(node, color)
+            for neighbor_node in [] if stopped else STATIC_GRAPH.neighbors(node):
                 edge = tuple(sorted((node, neighbor_node)))
 
                 # Must travel on a friendly road.
                 if not board.is_friendly_road(edge, color):
-                    continue
-
-                # Can't expand past an enemy node.
-                if board.is_enemy_node(neighbor_node, color):
                     continue
 
                 if edge not in path_thus_far:

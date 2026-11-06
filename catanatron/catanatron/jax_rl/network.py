@@ -10,12 +10,9 @@ the robber from tiles.
 import jax
 import jax.numpy as jnp
 
-from catanatron.jax_rl.obs import (
-    EDGE_FEATURES,
-    GLOBAL_FEATURES,
-    NODE_FEATURES,
-    TILE_FEATURES,
-)
+import numpy as np
+
+from catanatron.jax_rl.obs import feature_sizes
 from catanatron.jax_rl.topology import MARITIME_PAIRS, NUM_RESOURCES, YOP_PAIRS
 
 MASKED_LOGIT = -1e9
@@ -35,6 +32,8 @@ class GraphPolicy:
 
     def __init__(self, env, hidden=64, rounds=3):
         self.topo = topo = env.topo
+        self.num_players = env.num_players
+        self.feature_sizes = feature_sizes(env.num_players)
         self.hidden = hidden
         self.rounds = rounds
         self.num_actions = topo.num_actions
@@ -59,11 +58,14 @@ class GraphPolicy:
         def layer(in_dim, out_dim, scale=jnp.sqrt(2.0)):
             return _dense_init(next(keys), in_dim, out_dim, scale)
 
+        node_features, edge_features, tile_features, global_features = (
+            self.feature_sizes
+        )
         params = {
-            "embed_node": layer(NODE_FEATURES, h),
-            "embed_edge": layer(EDGE_FEATURES, h),
-            "embed_tile": layer(TILE_FEATURES, h),
-            "embed_global": layer(GLOBAL_FEATURES, h),
+            "embed_node": layer(node_features, h),
+            "embed_edge": layer(edge_features, h),
+            "embed_tile": layer(tile_features, h),
+            "embed_global": layer(global_features, h),
             "rounds": [
                 {
                     "node": layer(h, h),
@@ -75,7 +77,8 @@ class GraphPolicy:
             ],
             "head_node": layer(h, 2, 0.01),  # settlement, city
             "head_edge": layer(h, 1, 0.01),
-            "head_tile": layer(h, 2, 0.01),  # robber: no-steal, steal
+            # robber: no steal, then steal from each opponent
+            "head_tile": layer(h, self.num_players, 0.01),
             "head_global": layer(h, self.num_global_actions, 0.01),
             "head_value": layer(h, 1, 1.0),
         }
@@ -118,7 +121,7 @@ class GraphPolicy:
 
         node_logits = _dense(params["head_node"], n)  # [N, 2]
         edge_logits = _dense(params["head_edge"], e)[:, 0]  # [E]
-        tile_logits = _dense(params["head_tile"], t).ravel()  # [T * 2]
+        tile_logits = _dense(params["head_tile"], t).ravel()  # [T * P]
         global_logits = _dense(params["head_global"], g)
 
         split_a = self._split_turn
@@ -136,6 +139,34 @@ class GraphPolicy:
         )
         value = _dense(params["head_value"], g)[0]
         return logits, value
+
+
+def adapt_params(params, num_players):
+    """Widens 1v1 parameters to play `num_players`, as a warm start.
+
+    New inputs get zero weights, so the adapted network first plays as the 1v1 one
+    would with every opponent folded into "the opponent". Each extra robber victim
+    starts from the 1v1 steal logit.
+    """
+    if num_players == 2:
+        return params
+    sizes = dict(zip(("node", "edge", "tile", "global"), feature_sizes(num_players)))
+    params = dict(params)
+    for name, size in sizes.items():
+        layer = dict(params[f"embed_{name}"])
+        weight = np.asarray(layer["w"])
+        assert weight.shape[0] <= size, "parameters already have more inputs"
+        padding = np.zeros((size - weight.shape[0], weight.shape[1]), weight.dtype)
+        layer["w"] = np.concatenate([weight, padding])
+        params[f"embed_{name}"] = layer
+    head = dict(params["head_tile"])
+    weight, bias = np.asarray(head["w"]), np.asarray(head["b"])
+    assert weight.shape[1] == 2, "robber head is not from a 1v1 network"
+    extra = num_players - 2
+    head["w"] = np.concatenate([weight, np.repeat(weight[:, 1:], extra, axis=1)], 1)
+    head["b"] = np.concatenate([bias, np.repeat(bias[1:], extra)])
+    params["head_tile"] = head
+    return params
 
 
 def masked_log_probs(logits, mask):

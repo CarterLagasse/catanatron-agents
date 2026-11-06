@@ -24,7 +24,6 @@ from catanatron.jax_rl.topology import (
     YOP_PAIRS,
 )
 from catanatron.models.enums import (
-    CITY,
     DEVELOPMENT_CARDS,
     RESOURCES,
     SETTLEMENT,
@@ -47,14 +46,18 @@ _MARITIME_INDEX = {
 
 
 class ActionCodec:
-    """Translates engine Actions to JAX action indices."""
+    """Translates engine Actions to JAX action indices.
+
+    A robber action names its victim by color, while the JAX index names it by seat
+    offset from the mover, so encoding it needs the game's color_to_index.
+    """
 
     def __init__(self, topo):
         self.topo = topo
         self.edge_index = {tuple(e): i for i, e in enumerate(topo.edges.tolist())}
         self.tile_index = {c: i for i, c in enumerate(topo.tile_coordinates)}
 
-    def encode(self, action):
+    def encode(self, action, color_to_index=None):
         topo = self.topo
         kind, value = action.action_type, action.value
         if kind == ActionType.ROLL:
@@ -84,11 +87,15 @@ class ActionCodec:
             return topo.MONOPOLY + _RESOURCE_INDEX[value]
         if kind == ActionType.MOVE_ROBBER:
             coordinate, victim = value
-            return (
-                topo.ROBBER
-                + 2 * self.tile_index[coordinate]
-                + (0 if victim is None else 1)
-            )
+            players = topo.num_players
+            if victim is None:
+                offset = 0
+            elif players == 2:
+                offset = 1
+            else:
+                seat = color_to_index[action.color]
+                offset = (color_to_index[victim] - seat) % players
+            return topo.ROBBER + players * self.tile_index[coordinate] + offset
         if kind == ActionType.MARITIME_TRADE:
             give = _RESOURCE_INDEX[value[0]]
             get = _RESOURCE_INDEX[value[-1]]
@@ -97,7 +104,7 @@ class ActionCodec:
 
 
 def state_from_game(game, topo, batch_dim=True):
-    """Builds a JAX State from a 1v1 engine Game.
+    """Builds a JAX State from an engine Game with topo.num_players players.
 
     Seats are indices into game.state.colors. The dev deck keeps its true order,
     which is hidden from players because observations only expose its size.
@@ -105,7 +112,10 @@ def state_from_game(game, topo, batch_dim=True):
     state = game.state
     board = state.board
     colors = state.colors
-    assert len(colors) == 2, "the JAX environment is 1v1 only"
+    players = len(colors)
+    assert (
+        players == topo.num_players
+    ), f"this agent plays {topo.num_players}-player games, not {players}-player ones"
     ps = state.player_state
     catan_map = board.map
 
@@ -135,18 +145,18 @@ def state_from_game(game, topo, batch_dim=True):
         if color is not None:
             edge_owner[i] = state.color_to_index[color]
 
-    reach = np.zeros((2, topo.num_nodes), bool)
+    reach = np.zeros((players, topo.num_nodes), bool)
     for seat, color in enumerate(colors):
         for component in board.connected_components[color]:
             reach[seat, list(component)] = True
 
     def per_seat(key):
-        return np.array([ps[f"P{seat}_{key}"] for seat in range(2)], np.int32)
+        return np.array([ps[f"P{seat}_{key}"] for seat in range(players)], np.int32)
 
     hand = np.stack([per_seat(f"{r}_IN_HAND") for r in RESOURCES], axis=1)
     dev_hand = np.stack([per_seat(f"{d}_IN_HAND") for d in DEVELOPMENT_CARDS], axis=1)
-    dev_played = np.zeros((2, NUM_DEV_TYPES), np.int32)
-    dev_owned = np.zeros((2, NUM_DEV_TYPES), bool)
+    dev_played = np.zeros((players, NUM_DEV_TYPES), np.int32)
+    dev_owned = np.zeros((players, NUM_DEV_TYPES), bool)
     for i, dev in enumerate(DEVELOPMENT_CARDS[:4]):
         dev_played[:, i] = per_seat(f"PLAYED_{dev}")
         dev_owned[:, i] = per_seat(f"{dev}_OWNED_AT_START").astype(bool)
@@ -162,7 +172,7 @@ def state_from_game(game, topo, batch_dim=True):
     played_out = np.repeat(np.arange(NUM_DEV_TYPES), composition)
     dev_deck = np.concatenate([played_out, remaining]).astype(np.int32)
 
-    last_settlement = np.full(2, -1, np.int32)
+    last_settlement = np.full(players, -1, np.int32)
     for seat, color in enumerate(colors):
         settlements = state.buildings_by_color[color][SETTLEMENT]
         if settlements:

@@ -8,10 +8,12 @@ engine remains the source of truth for the rules and still powers the UI and CLI
 pip install -e ".[jax]"
 ```
 
-Scope: 1v1 games, on the BASE, TOURNAMENT and MINI maps. Domestic trades are not
-modelled, the same as in the gym environment.
+Scope: 2 to 4 players, on the BASE, TOURNAMENT and MINI maps. Domestic trades are
+not modelled, the same as in the gym environment. 1v1 is the default; see
+[More than two players](#more-than-two-players) for 3 and 4.
 
-[RESULTS.md](RESULTS.md) has measured agent strength and how to reproduce it. To play
+[RESULTS.md](RESULTS.md) has measured agent strength and how to reproduce it.
+[IMPROVING.md](IMPROVING.md) has the training curves and what to try next. To play
 against the agents, start the web server from the repository root in an environment
 with JAX, then pick a PSRO or PPO level as Player 2. They are listed only if their
 files exist under `runs/`.
@@ -50,6 +52,52 @@ run. `F-control` plays the engine's bot against itself and must land near 50%. F
 
 Use relative paths in `--players`: a Windows drive colon would split the player spec.
 
+## More than two players
+
+`--num-players 3` or `4` trains agents for bigger tables, such as the JSettlers
+benchmark (one agent against 3 JSettlers robots, see `catanatron/sota/`). Training
+stays in the JAX simulator, about as fast per move as 1v1; JSettlers games are far
+too slow to train on, so they are used only to measure.
+
+```bash
+# Start from a 1v1 agent: --init-from widens a 1v1 checkpoint automatically
+python -m catanatron.jax_rl.psro --run-dir runs/psro4 --num-players 4     --init-from runs/gpu/psro/br_11.npz --scripted-population heuristic     --iterations 12 --first-response-timesteps 32000000 --response-timesteps 24000000     --eval-envs 512 --eval-ticks 1600 --resume
+python -m catanatron.jax_rl.ppo --run-dir runs/ppo4 --num-players 4     --init-from runs/gpu/ppo/selected.npz
+
+# A 1v1 agent turned into a 4-player one without training, as a baseline
+python -m catanatron.jax_rl.widen runs/gpu/psro runs/widened/psro4 --num-players 4
+
+# Measure: engine games against a table of 3 bots, and the JSettlers robots
+python -m catanatron.jax_rl.tournament --run-dir runs/eval4 --num-players 4     --agent PSRO4=runs/psro4:1 --vs F=1000 --vs AB:2=300
+catanatron-jsettlers --player=JAX:runs/psro4:1 --num=300 --parallel=4
+```
+
+An equally strong player wins 1 game in P. How it works:
+
+- **Seats and actions.** Seat 0 moves first and play goes up the seats. The robber has
+  one action per tile for each possible victim, named by how many seats after the
+  mover the victim sits; that is the only change to the action space.
+- **Observations.** The 1v1 features stay first. Board features in them ("an
+  opponent's road") cover all opponents, and global ones describe the next player.
+  One block per opponent is appended to every node, edge, tile and the globals.
+- **Rewards.** +1 for a win and -1/(P-1) for a loss, so rewards sum to zero and an
+  equal player expects 0. VP shaping uses each seat's lead over the average opponent.
+- **PPO.** In pool and scripted games the learner takes one random seat and the
+  opponent fills all the others; in self-play games every seat learns.
+- **PSRO.** `payoffs[i, j]` is i's reward with j in every other seat, measured in both
+  directions. The meta-solver works on `(payoffs - payoffs.T) / 2`, which in 1v1 is
+  the payoff matrix itself. Responses train against tables drawn from the mixture.
+- **Warm starts.** `network.adapt_params` gives the new inputs zero weights and copies
+  the 1v1 steal logit to every victim, so a widened agent first plays exactly as the
+  1v1 one would, treating every opponent as "the opponent". The widened GPU PSRO
+  agent wins 99.8% against tables of 3 random bots and 48% against 3 heuristic bots.
+
+A checkpoint records its player count, and an agent only plays games of that size.
+Older checkpoints, saved without a player count, are 1v1.
+
+[PSRO4_V2.md](PSRO4_V2.md) follows the latest 4-player run round by round, with its
+engine and JSettlers results.
+
 ## Layout
 
 | File | Purpose |
@@ -65,11 +113,14 @@ Use relative paths in `--players`: a Windows drive colon would split the player 
 | `bridge.py`, `jax_player.py` | Run trained agents in the Python engine |
 | `tournament.py` | Large engine matches with a readable report |
 | `benchmark.py` | Measures simulation and training throughput |
+| `widen.py` | Turns a 1v1 agent into a 3- or 4-player one, as a baseline or warm start |
 
 ## Guarantees and how they are checked
 
 - `tests/jax_rl/test_parity.py` replays engine games through JAX without re-syncing,
-  comparing full state and legal moves after every action.
+  comparing full state and legal moves after every action, with 2, 3 and 4 players.
+  It also checks the rare rule cases of `tests/test_rules.py` (Longest Road after a
+  broken road, winning only on your own turn, bank shortages) position by position.
 - `tests/jax_rl/test_env.py` checks longest road against brute force, card
   conservation, and that observations do not leak the opponent's hidden cards.
 - `tests/jax_rl/test_training.py` checks GAE by hand-computed cases, action-head

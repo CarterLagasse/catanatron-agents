@@ -75,7 +75,10 @@ def test_yield_resources_two_players_and_city():
     assert freqdeck_count(payout[Color.BLUE], tile.resource) >= 2  # type: ignore
 
 
-def test_empty_payout_if_not_enough_resources():
+def test_sole_claimant_gets_what_is_left_if_not_enough_resources():
+    """The bank can't pay RED's city 2 cards, but only RED is owed them, so RED gets
+    the last one (Almanac, Resource Production). With 2+ players owed a resource
+    nobody gets it: see tests/test_rules.py."""
     board = Board()
     resource_freqdeck = starting_resource_bank()
 
@@ -89,6 +92,4 @@ def test_empty_payout_if_not_enough_resources():
 
     payout, depleted = yield_resources(board, resource_freqdeck, tile.number)
     assert depleted == [tile.resource]
-    assert (
-        Color.RED not in payout or freqdeck_count(payout[Color.RED], tile.resource) == 0  # type: ignore
-    )
+    assert freqdeck_count(payout[Color.RED], tile.resource) == 1  # type: ignore

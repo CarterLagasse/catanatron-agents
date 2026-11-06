@@ -49,21 +49,29 @@ def replace_file(source, target, attempts=60):
             time.sleep(1)
 
 
-def save_params(path, params, hidden, rounds, map_type):
+def save_params(path, params, hidden, rounds, map_type, num_players=2):
     """Writes atomically, so an interrupted run never leaves a corrupt checkpoint."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = dict(_flatten(params))
-    meta = json.dumps({"hidden": hidden, "rounds": rounds, "map_type": map_type})
+    meta = json.dumps(
+        {
+            "hidden": hidden,
+            "rounds": rounds,
+            "map_type": map_type,
+            "num_players": num_players,
+        }
+    )
     temporary = path.with_suffix(".tmp.npz")
     np.savez(temporary, __meta__=np.array(meta), **arrays)
     replace_file(temporary, path)
 
 
 def load_params(path):
-    """Returns (params, meta)."""
+    """Returns (params, meta). Checkpoints from before multiplayer support are 1v1."""
     with np.load(path) as data:
         meta = json.loads(str(data["__meta__"]))
+        meta.setdefault("num_players", 2)
         tree = {}
         for name in data.files:
             if name != "__meta__":

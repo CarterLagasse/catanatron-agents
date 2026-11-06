@@ -164,7 +164,7 @@ def test_ppo_smoke_and_checkpoint_round_trip(tmp_path):
     assert (tmp_path / "metrics.jsonl").read_text().count("\n") == 2
 
     loaded, meta = checkpoint.load_params(tmp_path / "latest.npz")
-    assert meta == {"hidden": 8, "rounds": 1, "map_type": "MINI"}
+    assert meta == {"hidden": 8, "rounds": 1, "map_type": "MINI", "num_players": 2}
     flat_a = jax.tree_util.tree_leaves(params)
     flat_b = jax.tree_util.tree_leaves(loaded)
     assert len(flat_a) == len(flat_b)
@@ -260,10 +260,10 @@ def test_ppo_learns_a_simple_game(tmp_path):
         hidden=16,
         rounds=2,
         num_minibatches=4,
-        total_timesteps=64 * 32 * 60,
+        total_timesteps=64 * 32 * 100,
         learning_rate=1e-3,
         final_learning_rate=3e-4,
-        eval_every=60,
+        eval_every=100,
         eval_envs=128,
         eval_ticks=200,
     )
@@ -506,3 +506,105 @@ def test_cli_parses_jax_player(tmp_path):
     game = Game(players)
     game.play()
     assert game.state.num_turns > 0
+
+
+def test_adapt_params_widens_a_1v1_network():
+    from catanatron.jax_rl.network import adapt_params
+
+    key = jax.random.PRNGKey(0)
+    narrow = GraphPolicy(CatanEnv("BASE"), 8, 1).init(key)
+    env = CatanEnv("BASE", num_players=4)
+    policy = GraphPolicy(env, 8, 1)
+    wide = adapt_params(narrow, 4)
+    expected = policy.init(key)
+    assert jax.tree_util.tree_structure(wide) == jax.tree_util.tree_structure(expected)
+    for a, b in zip(jax.tree_util.tree_leaves(wide), jax.tree_util.tree_leaves(expected)):
+        assert np.shape(a) == np.shape(b)
+
+    state = jax.tree_util.tree_map(lambda x: x[0], env.batch_reset(key, 1))
+    logits, _ = policy.apply(wide, encode_current(env, state))
+    assert logits.shape == (env.num_actions,)
+    robber = np.asarray(logits[env.topo.ROBBER : env.topo.MARITIME]).reshape(-1, 4)
+    # Every victim starts with the 1v1 steal logit.
+    assert np.allclose(robber[:, 1:], robber[:, 1:2])
+
+
+MULTIPLAYER = dict(
+    map_type="BASE",
+    num_players=4,
+    num_envs=16,
+    rollout_ticks=8,
+    pool_segments=2,
+    hidden=8,
+    rounds=1,
+    phase_iterations=1,
+)
+
+
+def _four_player_game(player, seed=0):
+    others = [RandomPlayer(c) for c in (Color.RED, Color.ORANGE, Color.WHITE)]
+    return Game([player] + others, seed=seed)
+
+
+def test_multiplayer_ppo_trains_and_plays_engine_games(tmp_path):
+    config = PPOConfig(
+        num_minibatches=2,
+        total_timesteps=16 * 8 * 2,
+        eval_every=2,
+        eval_envs=4,
+        eval_ticks=8,
+        snapshot_every=1,
+        **MULTIPLAYER,
+    )
+    train(config, tmp_path, log=lambda _: None)
+    _, meta = checkpoint.load_params(tmp_path / "latest.npz")
+    assert meta["num_players"] == 4
+
+    player = JaxPlayer(Color.BLUE, tmp_path / "latest.npz")
+    game = _four_player_game(player)
+    game.play()
+    assert game.state.num_turns > 0
+
+    with pytest.raises(ValueError, match="4-player"):
+        Game([JaxPlayer(Color.BLUE, tmp_path / "latest.npz"), RandomPlayer(Color.RED)]).play()
+
+    records = _play_games((str(tmp_path / "latest.npz"), True, "R", [5], "BASE", 4))
+    assert records[0]["result"] in ("win", "loss", "draw")
+    assert 0 <= records[0]["seat"] < 4
+
+
+def test_multiplayer_psro_fills_both_directions_of_the_payoffs(tmp_path):
+    config = PSROConfig(
+        iterations=1,
+        first_response_timesteps=16 * 8,
+        response_timesteps=16 * 8,
+        eval_envs=8,
+        eval_ticks=16,
+        **MULTIPLAYER,
+    )
+    population = train_psro(config, tmp_path, log=lambda _: None)
+    assert population.names == ["random", "weighted", "heuristic", "br_00"]
+    assert population.payoffs.shape == (4, 4)
+    meta = population.meta_payoffs()
+    assert np.allclose(meta, -meta.T)
+    data = json.loads((tmp_path / "population.json").read_text())
+    assert data["num_players"] == 4
+
+    game = _four_player_game(JaxPlayer(Color.BLUE, str(tmp_path)))
+    game.play()
+    assert game.state.num_turns > 0
+
+
+def test_widen_turns_a_1v1_checkpoint_into_a_multiplayer_agent(tmp_path):
+    from catanatron.jax_rl.widen import widen
+
+    params = GraphPolicy(CatanEnv("BASE"), 8, 1).init(jax.random.PRNGKey(0))
+    checkpoint.save_params(tmp_path / "duel.npz", params, 8, 1, "BASE")
+    widen(tmp_path / "duel.npz", tmp_path / "table.npz", 4)
+    _, meta = checkpoint.load_params(tmp_path / "table.npz")
+    assert meta["num_players"] == 4
+    game = _four_player_game(JaxPlayer(Color.BLUE, tmp_path / "table.npz"), seed=1)
+    game.play()
+    assert game.state.num_turns > 0
+    with pytest.raises(ValueError, match="not a 1v1"):
+        widen(tmp_path / "table.npz", tmp_path / "again.npz", 4)

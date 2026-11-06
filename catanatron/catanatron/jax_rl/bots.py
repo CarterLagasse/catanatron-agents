@@ -50,10 +50,9 @@ def _node_values(env, s):
 
 def heuristic_logits(env, s):
     """Priority rules: good placements, cities over settlements over dev cards,
-    purposeful bank trades, and a robber aimed at the opponent's production."""
+    purposeful bank trades, and a robber aimed at opponents' production."""
     topo = env.topo
     seat = s.current
-    other = 1 - seat
     hand = s.hand[seat]
     logits = jnp.zeros(env.num_actions, jnp.float32)
 
@@ -108,9 +107,10 @@ def heuristic_logits(env, s):
     yop_cards = env.yop_cards
     yop_score = 75.0 + 3.0 * (jnp.minimum(yop_cards, goal_need)).sum(axis=1)
     logits = logits.at[topo.YOP : topo.MONOPOLY].set(yop_score)
-    # Monopoly on the resource the opponent could hold most of, guessed from
+    # Monopoly on the resource opponents could hold most of, guessed from
     # their production.
-    opponent_levels = (s.node_owner == other) * s.node_level
+    is_opponent = (s.node_owner >= 0) & (s.node_owner != seat)
+    opponent_levels = is_opponent * s.node_level
     tile_levels = opponent_levels[env.tile_nodes].sum(axis=1)
     kinds = jax.nn.one_hot(s.tile_resource, NUM_RESOURCES + 1)[:, :NUM_RESOURCES]
     probability = DICE_PROBABILITY[s.tile_number]
@@ -118,10 +118,14 @@ def heuristic_logits(env, s):
     opponent_income = opponent_income.sum(axis=0)
     logits = logits.at[topo.MONOPOLY : topo.ROBBER].set(55.0 + 40.0 * opponent_income)
 
-    # Robber: hit the opponent's best tile, avoid our own, prefer stealing.
+    # Robber: hit opponents' best tile, avoid our own, prefer stealing, and with
+    # several victims to choose from, steal from the leader.
     my_on_tile = (s.node_owner[env.tile_nodes] == seat).any(axis=1)
     robber_value = (tile_levels * probability) * 100.0 - 50.0 * my_on_tile
-    robber_scores = jnp.stack([robber_value, robber_value + 2.0], axis=1).ravel()
+    victim_bonus = 2.0 + 0.1 * s.vp_public[env.opponents(seat)] * (env.num_players > 2)
+    robber_scores = jnp.concatenate(
+        [robber_value[:, None], robber_value[:, None] + victim_bonus], axis=1
+    ).ravel()
     logits = logits.at[topo.ROBBER : topo.MARITIME].set(robber_scores)
 
     # Discard whatever we hold the most of beyond what builds need.

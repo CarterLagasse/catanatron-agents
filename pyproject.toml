@@ -44,6 +44,7 @@ Repository = "https://github.com/bcollazo/catanatron"
 
 [project.scripts]
 catanatron-play = "catanatron.cli.play:simulate"
+catanatron-jsettlers = "catanatron.sota.jsettlers.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["catanatron"]

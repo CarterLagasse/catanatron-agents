@@ -218,11 +218,12 @@ python -m catanatron.jax_rl.tournament --run-dir runs/eval \
 
 ## Limits
 
-- **Rules are the Python engine's, bugs included.** The JAX rules deliberately match the
-  engine, and the agents may exploit two quirks, so these win rates may not carry over to
-  standard Catan:
-  - Cutting through a road can re-award longest road with no 5-road minimum, worth +2 VP.
-  - A player can build from a node where an enemy settlement cut their road.
+- **Measured under the old rules.** These agents were trained and measured before six
+  rules were corrected (see the main README's "Rule Changes in This Fork"). The old rules
+  had two quirks they may exploit: cutting a road could hand Longest Road to a road under
+  5 pieces, and a player could build onward from behind an enemy settlement that cut a
+  loop. The 4-player agent was retrained under the new rules and was about as strong as
+  before ([PSRO4_V2.md](PSRO4_V2.md)). The 1v1 agents here haven't been re-measured.
 - **Reduced game.** Only 1v1 is covered, with no domestic trades.
 - **Opponents are limited.** The agents have only been measured against these bots and
   each other, not people or stronger search such as deeper `AB` or MCTS.

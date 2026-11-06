@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="340" viewBox="0 0 760 340" role="img" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<title>How much each PSRO response beat the mixture before it</title><desc>Win-rate points above 50% for each new best response against the previous Nash mixture, for the CPU and GPU PSRO runs. All stay between -3 and +3.</desc>
+<rect width="760" height="340" rx="8" fill="#fcfcfb"/>
+<line x1="64.0" y1="280.0" x2="720.0" y2="280.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="58.0" y="284.0" fill="#898781" font-size="11" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">-4</text>
+<line x1="64.0" y1="226.0" x2="720.0" y2="226.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="58.0" y="230.0" fill="#898781" font-size="11" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">-2</text>
+<line x1="64.0" y1="172.0" x2="720.0" y2="172.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="58.0" y="176.0" fill="#898781" font-size="11" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">0</text>
+<line x1="64.0" y1="118.0" x2="720.0" y2="118.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="58.0" y="122.0" fill="#898781" font-size="11" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">+2</text>
+<line x1="64.0" y1="64.0" x2="720.0" y2="64.0" stroke="#e1e0d9" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="58.0" y="68.0" fill="#898781" font-size="11" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">+4</text>
+<line x1="64.0" y1="280.0" x2="720.0" y2="280.0" stroke="#c3c2b7" stroke-width="1.0" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="91.3" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">0</text>
+<text x="146.0" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">1</text>
+<text x="200.7" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">2</text>
+<text x="255.3" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">3</text>
+<text x="310.0" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">4</text>
+<text x="364.7" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">5</text>
+<text x="419.3" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">6</text>
+<text x="474.0" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">7</text>
+<text x="528.7" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">8</text>
+<text x="583.3" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">9</text>
+<text x="638.0" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">10</text>
+<text x="692.7" y="296.0" fill="#898781" font-size="11" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">11</text>
+<text x="392.0" y="314.0" fill="#52514e" font-size="12" font-weight="400" text-anchor="middle" font-variant-numeric="tabular-nums">PSRO iteration</text>
+<text x="20.0" y="52.0" fill="#52514e" font-size="12" font-weight="400" text-anchor="start">Win-rate points above 50%</text>
+<rect x="64" y="112.3" width="656" height="119.3" fill="#898781" fill-opacity="0.12"/>
+<text x="716.0" y="246.7" fill="#898781" font-size="11" font-weight="400" text-anchor="end" font-variant-numeric="tabular-nums">Shaded: ±2.2, one standard error of a 512-game pairing</text>
+<line x1="64.0" y1="172.0" x2="720.0" y2="172.0" stroke="#c3c2b7" stroke-width="1.5" stroke-opacity="1.0" stroke-linecap="round"/>
+<polyline points="91.3,170.4 146.0,167.8 200.7,140.2 255.3,199.1 310.0,112.7 364.7,104.6 419.3,125.9 474.0,135.2 528.7,111.9 583.3,153.7 638.0,212.4 692.7,159.0" fill="none" stroke="#2a78d6" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="91.3" cy="170.4" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="146.0" cy="167.8" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="200.7" cy="140.2" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.3" cy="199.1" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="310.0" cy="112.7" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="364.7" cy="104.6" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="419.3" cy="125.9" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="474.0" cy="135.2" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="528.7" cy="111.9" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="583.3" cy="153.7" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="638.0" cy="212.4" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="692.7" cy="159.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<polyline points="91.3,90.9 146.0,248.8 200.7,153.7 255.3,110.8 310.0,132.8 364.7,113.8 419.3,124.0 474.0,157.5 528.7,141.8 583.3,159.8 638.0,110.3 692.7,120.8" fill="none" stroke="#eb6834" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="91.3" cy="90.9" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="146.0" cy="248.8" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="200.7" cy="153.7" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.3" cy="110.8" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="310.0" cy="132.8" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="364.7" cy="113.8" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="419.3" cy="124.0" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="474.0" cy="157.5" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="528.7" cy="141.8" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="583.3" cy="159.8" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="638.0" cy="110.3" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="692.7" cy="120.8" r="4.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<line x1="64.0" y1="26.0" x2="80.0" y2="26.0" stroke="#2a78d6" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="86.0" y="30.0" fill="#52514e" font-size="12" font-weight="400" text-anchor="start">GPU, 16M steps per response</text>
+<line x1="272.2" y1="26.0" x2="288.2" y2="26.0" stroke="#eb6834" stroke-width="2" stroke-opacity="1.0" stroke-linecap="round"/>
+<text x="294.2" y="30.0" fill="#52514e" font-size="12" font-weight="400" text-anchor="start">CPU, 4M steps per response</text>
+</svg>

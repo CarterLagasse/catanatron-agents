@@ -1,11 +1,12 @@
-"""Pure-JAX implementation of 1v1 Catan: jittable, vmappable, no Python state.
+"""Pure-JAX implementation of 2- to 4-player Catan: jittable, vmappable, no Python state.
 
 Rules follow the Python engine (`catanatron.apply_action`, `models.actions`,
 `models.board`) move for move, including its quirks; tests/jax_rl/test_parity.py
 replays real games through both and compares them after every action. Domestic
 trades are not modelled, matching the gym environment, whose action space has none.
 
-Seats are abstract: seat 0 moves first. Mapping agents to seats is up to callers.
+Seats are abstract: seat 0 moves first and play goes up the seat numbers. Mapping
+agents to seats is up to callers. P below is the number of players.
 
 The step function is branchless because `cond`/`switch` become `select` under
 vmap, which would run every action handler for every game anyway. The one
@@ -65,23 +66,23 @@ class State(NamedTuple):
     node_level: jnp.ndarray  # [N] 0 none, 1 settlement, 2 city
     edge_owner: jnp.ndarray  # [E] -1 or seat
     robber_tile: jnp.ndarray
-    reach: jnp.ndarray  # [2, N] union of Board.connected_components per seat
+    reach: jnp.ndarray  # [P, N] union of Board.connected_components per seat
     # Cards
-    hand: jnp.ndarray  # [2, 5]
+    hand: jnp.ndarray  # [P, 5]
     bank: jnp.ndarray  # [5]
-    dev_hand: jnp.ndarray  # [2, 5]
-    dev_owned: jnp.ndarray  # [2, 5] *_OWNED_AT_START
-    dev_played: jnp.ndarray  # [2, 5]
+    dev_hand: jnp.ndarray  # [P, 5]
+    dev_owned: jnp.ndarray  # [P, 5] *_OWNED_AT_START
+    dev_played: jnp.ndarray  # [P, 5]
     dev_deck: jnp.ndarray  # [25] shuffled
     dev_drawn: jnp.ndarray
     # Scores and pieces
-    vp_public: jnp.ndarray  # [2]
-    vp_actual: jnp.ndarray  # [2]
-    roads_left: jnp.ndarray  # [2]
-    settlements_left: jnp.ndarray  # [2]
-    cities_left: jnp.ndarray  # [2]
-    last_settlement: jnp.ndarray  # [2]
-    road_length: jnp.ndarray  # [2] Board.road_lengths
+    vp_public: jnp.ndarray  # [P]
+    vp_actual: jnp.ndarray  # [P]
+    roads_left: jnp.ndarray  # [P]
+    settlements_left: jnp.ndarray  # [P]
+    cities_left: jnp.ndarray  # [P]
+    last_settlement: jnp.ndarray  # [P]
+    road_length: jnp.ndarray  # [P] Board.road_lengths
     road_holder: jnp.ndarray  # -1 or seat
     road_best: jnp.ndarray  # Board.road_length
     army_holder: jnp.ndarray  # -1 or seat
@@ -89,11 +90,11 @@ class State(NamedTuple):
     current: jnp.ndarray  # seat that must decide now
     turn_player: jnp.ndarray
     prompt: jnp.ndarray
-    has_rolled: jnp.ndarray  # [2]
-    played_dev: jnp.ndarray  # [2]
+    has_rolled: jnp.ndarray  # [P]
+    played_dev: jnp.ndarray  # [P]
     road_building: jnp.ndarray
     free_roads: jnp.ndarray
-    discard_counts: jnp.ndarray  # [2]
+    discard_counts: jnp.ndarray  # [P]
     num_turns: jnp.ndarray
     num_plies: jnp.ndarray
     # Pending longest-road search, see batch_step
@@ -108,14 +109,14 @@ class Chance(NamedTuple):
     """Outcome of the random events a step could need."""
 
     dice: jnp.ndarray  # sum of two dice
-    stolen: jnp.ndarray  # resource taken if this action steals
+    stolen: jnp.ndarray  # resource taken if this action steals, from its victim
 
 
 class StepInfo(NamedTuple):
     done: jnp.ndarray
     winner: jnp.ndarray
     plies: jnp.ndarray
-    rewards: jnp.ndarray  # [2], per seat, for the action just taken
+    rewards: jnp.ndarray  # [P], per seat, for the action just taken
 
 
 class CatanEnv:
@@ -125,12 +126,14 @@ class CatanEnv:
         self,
         map_type="BASE",
         vps_to_win=10,
+        num_players=2,
         turns_limit=1000,
         max_plies=6000,
         shaping_vp=0.0,
     ):
-        self.topo = topo = get_topology(map_type)
+        self.topo = topo = get_topology(map_type, num_players)
         self.map_type = map_type
+        self.num_players = num_players
         self.vps_to_win = vps_to_win
         self.turns_limit = turns_limit
         # The Python engine has no ply limit, but untrained policies can trade with
@@ -187,7 +190,8 @@ class CatanEnv:
             tile_number = jnp.zeros(topo.num_tiles, jnp.int32)
             tile_number = tile_number.at[order].set(jnp.where(is_land, numbers, 0))
 
-        zeros2 = jnp.zeros(2, jnp.int32)
+        players = self.num_players
+        zeros_p = jnp.zeros(players, jnp.int32)
         scalar0 = jnp.zeros((), jnp.int32)
         return State(
             tile_resource=tile_resource,
@@ -197,32 +201,32 @@ class CatanEnv:
             node_level=jnp.zeros(topo.num_nodes, jnp.int32),
             edge_owner=jnp.full(topo.num_edges, -1, jnp.int32),
             robber_tile=jnp.argmax(tile_resource == DESERT).astype(jnp.int32),
-            reach=jnp.zeros((2, topo.num_nodes), bool),
-            hand=jnp.zeros((2, NUM_RESOURCES), jnp.int32),
+            reach=jnp.zeros((players, topo.num_nodes), bool),
+            hand=jnp.zeros((players, NUM_RESOURCES), jnp.int32),
             bank=jnp.full(NUM_RESOURCES, 19, jnp.int32),
-            dev_hand=jnp.zeros((2, NUM_DEV_TYPES), jnp.int32),
-            dev_owned=jnp.zeros((2, NUM_DEV_TYPES), bool),
-            dev_played=jnp.zeros((2, NUM_DEV_TYPES), jnp.int32),
+            dev_hand=jnp.zeros((players, NUM_DEV_TYPES), jnp.int32),
+            dev_owned=jnp.zeros((players, NUM_DEV_TYPES), bool),
+            dev_played=jnp.zeros((players, NUM_DEV_TYPES), jnp.int32),
             dev_deck=jax.random.permutation(k_deck, jnp.asarray(DEV_DECK)),
             dev_drawn=scalar0,
-            vp_public=zeros2,
-            vp_actual=zeros2,
-            roads_left=jnp.full(2, MAX_ROADS, jnp.int32),
-            settlements_left=jnp.full(2, 5, jnp.int32),
-            cities_left=jnp.full(2, 4, jnp.int32),
-            last_settlement=jnp.full(2, -1, jnp.int32),
-            road_length=zeros2,
+            vp_public=zeros_p,
+            vp_actual=zeros_p,
+            roads_left=jnp.full(players, MAX_ROADS, jnp.int32),
+            settlements_left=jnp.full(players, 5, jnp.int32),
+            cities_left=jnp.full(players, 4, jnp.int32),
+            last_settlement=jnp.full(players, -1, jnp.int32),
+            road_length=zeros_p,
             road_holder=jnp.full((), -1, jnp.int32),
             road_best=scalar0,
             army_holder=jnp.full((), -1, jnp.int32),
             current=scalar0,
             turn_player=scalar0,
             prompt=jnp.full((), BUILD_INITIAL_SETTLEMENT, jnp.int32),
-            has_rolled=jnp.zeros(2, bool),
-            played_dev=jnp.zeros(2, bool),
+            has_rolled=jnp.zeros(players, bool),
+            played_dev=jnp.zeros(players, bool),
             road_building=jnp.zeros((), bool),
             free_roads=scalar0,
-            discard_counts=zeros2,
+            discard_counts=zeros_p,
             num_turns=scalar0,
             num_plies=scalar0,
             road_eval=jnp.full((), NO_ROAD_EVAL, jnp.int32),
@@ -253,12 +257,21 @@ class CatanEnv:
     def can_play_dev(self, s, seat):
         return (~s.played_dev[seat]) & (s.dev_hand[seat] >= 1) & s.dev_owned[seat]
 
+    def opponents(self, seat):
+        """[P - 1] seats after `seat` in turn order, which are the robber's victim slots."""
+        return (seat + jnp.arange(1, self.num_players)) % self.num_players
+
+    def robber_victims(self, s, seat):
+        """[T, P - 1]: whether the robber on each tile could steal from each opponent."""
+        opponents = self.opponents(seat)
+        on_tile = (s.node_owner[self.tile_nodes][:, :, None] == opponents).any(axis=1)
+        return on_tile & (s.hand[opponents].sum(axis=1) >= 1)
+
     # ===== Move generation
     def legal_mask(self, s):
         """models.actions.generate_playable_actions as a boolean action mask."""
         topo = self.topo
         seat = s.current
-        other = 1 - seat
         hand = s.hand[seat]
 
         initial_settle = s.prompt == BUILD_INITIAL_SETTLEMENT
@@ -308,9 +321,9 @@ class CatanEnv:
         single_ok = (s.bank >= 1) & (self.yop_involves & ~pair_ok).any(axis=1)
         can_yop = normal & playable[YEAR_OF_PLENTY]
 
-        # Robber: a tile offers steal if an opponent building with cards is there.
-        enemy_on_tile = (s.node_owner[self.tile_nodes] == other).any(axis=1)
-        can_steal = enemy_on_tile & (s.hand[other].sum() >= 1)
+        # Robber: a tile offers one steal per opponent with a building there and
+        # cards in hand, or else a move without stealing.
+        can_steal = self.robber_victims(s, seat)
         may_move = robbing & (jnp.arange(topo.num_tiles) != s.robber_tile)
 
         # Maritime
@@ -339,8 +352,12 @@ class CatanEnv:
                 can_yop & pair_ok,
                 can_yop & single_ok,
                 jnp.broadcast_to(normal & playable[MONOPOLY], (NUM_RESOURCES,)),
-                jnp.stack(
-                    [may_move & ~can_steal, may_move & can_steal], axis=1
+                jnp.concatenate(
+                    [
+                        (may_move & ~can_steal.any(axis=1))[:, None],
+                        may_move[:, None] & can_steal,
+                    ],
+                    axis=1,
                 ).ravel(),
                 maritime,
             ]
@@ -348,10 +365,18 @@ class CatanEnv:
         return mask
 
     # ===== Dynamics
-    def sample_chance(self, key, s):
+    def robber_victim(self, s, action):
+        """Seat a robber action steals from; the next seat for any other action."""
+        topo = self.topo
+        slot = action - topo.ROBBER
+        is_robber = (slot >= 0) & (slot < self.num_players * topo.num_tiles)
+        offset = jnp.where(is_robber, slot % self.num_players, 1)
+        return (s.current + jnp.maximum(offset, 1)) % self.num_players
+
+    def sample_chance(self, key, s, action):
         k_a, k_b, k_steal = jax.random.split(key, 3)
         dice = jax.random.randint(k_a, (), 1, 7) + jax.random.randint(k_b, (), 1, 7)
-        victim_hand = s.hand[1 - s.current]
+        victim_hand = s.hand[self.robber_victim(s, action)]
         # log(0) = -inf is never drawn by categorical
         stolen = jax.random.categorical(
             k_steal, jnp.log(victim_hand.astype(jnp.float32))
@@ -361,8 +386,10 @@ class CatanEnv:
     def _apply(self, s, action, chance):
         """Applies one legal action. Longest road is resolved later."""
         topo = self.topo
+        players = self.num_players
         seat = s.current
-        other = 1 - seat
+        seats = jnp.arange(players)
+        next_seat = (seat + 1) % players
 
         def in_range(start, count):
             return (action >= start) & (action < start + count)
@@ -378,7 +405,7 @@ class CatanEnv:
         is_city = in_range(topo.CITY, topo.num_nodes)
         is_yop = in_range(topo.YOP, self.yop_cards.shape[0])
         is_monopoly = in_range(topo.MONOPOLY, NUM_RESOURCES)
-        is_robber = in_range(topo.ROBBER, 2 * topo.num_tiles)
+        is_robber = in_range(topo.ROBBER, players * topo.num_tiles)
         is_maritime = in_range(topo.MARITIME, len(MARITIME_PAIRS))
 
         resource = jnp.clip(
@@ -388,7 +415,7 @@ class CatanEnv:
         settlement_node = jnp.clip(action - topo.SETTLEMENT, 0, topo.num_nodes - 1)
         city_node = jnp.clip(action - topo.CITY, 0, topo.num_nodes - 1)
         yop_index = jnp.clip(action - topo.YOP, 0, self.yop_cards.shape[0] - 1)
-        robber_index = jnp.clip(action - topo.ROBBER, 0, 2 * topo.num_tiles - 1)
+        robber_index = jnp.clip(action - topo.ROBBER, 0, players * topo.num_tiles - 1)
         trade = self.maritime_pairs[jnp.clip(action - topo.MARITIME, 0, 19)]
 
         initial_settle = s.prompt == BUILD_INITIAL_SETTLEMENT
@@ -415,21 +442,20 @@ class CatanEnv:
         producing = (s.tile_number == chance.dice) & (
             jnp.arange(topo.num_tiles) != s.robber_tile
         )
-        tile_levels = jnp.stack(
-            [
-                (s.node_level * (s.node_owner == 0))[self.tile_nodes].sum(axis=1),
-                (s.node_level * (s.node_owner == 1))[self.tile_nodes].sum(axis=1),
-            ]
-        )  # [2, T]
+        node_levels = s.node_level * (s.node_owner == seats[:, None])  # [P, N]
+        tile_levels = node_levels[:, self.tile_nodes].sum(axis=2)  # [P, T]
         by_resource = jax.nn.one_hot(
             s.tile_resource, NUM_RESOURCES + 1, dtype=jnp.int32
         )[
             :, :NUM_RESOURCES
         ]  # [T, 5]
-        payout = (tile_levels * producing) @ by_resource  # [2, 5]
-        # A resource the bank cannot fully pay out is paid to nobody.
+        payout = (tile_levels * producing) @ by_resource  # [P, 5]
+        # A resource the bank cannot fully pay out is paid to nobody, unless only
+        # 1 player is owed it: they get what is left (yield_resources).
         payable = payout.sum(axis=0) <= bank
-        payout = payout * payable * (is_roll & ~rolled_seven)
+        sole_claimant = (payout > 0).sum(axis=0) == 1
+        payout = jnp.where(payable, payout, jnp.minimum(payout, bank) * sole_claimant)
+        payout = payout * (is_roll & ~rolled_seven)
         hand = hand + payout
         bank = bank - payout.sum(axis=0)
         has_rolled = s.has_rolled.at[seat].set(s.has_rolled[seat] | is_roll)
@@ -446,21 +472,23 @@ class CatanEnv:
         bank = bank + one_card * is_discard
         discard_counts = discard_counts.at[seat].add(-is_discard.astype(jnp.int32))
         finished_own = is_discard & (discard_counts[seat] == 0)
-        # Seats are asked in order, so only seat 0 can hand over to another seat.
-        next_discarder = finished_own & (seat == 0) & (discard_counts[1] > 0)
+        # Seats are asked in seat order (not from the roller), as in apply_discard.
+        later = (seats > seat) & (discard_counts > 0)
+        next_discarder = finished_own & later.any()
         all_discarded = finished_own & ~next_discarder
-        current = jnp.where(next_discarder, 1, current)
+        current = jnp.where(next_discarder, jnp.argmax(later), current)
         current = jnp.where(all_discarded, turn_player, current)
         prompt = jnp.where(all_discarded, MOVE_ROBBER, prompt)
         discard_counts = jnp.where(
-            all_discarded, jnp.zeros(2, jnp.int32), discard_counts
+            all_discarded, jnp.zeros(players, jnp.int32), discard_counts
         )
 
         # ----- Robber
-        robber_tile = jnp.where(is_robber, robber_index // 2, s.robber_tile)
-        steals = is_robber & (robber_index % 2 == 1)
+        robber_tile = jnp.where(is_robber, robber_index // players, s.robber_tile)
+        steals = is_robber & (robber_index % players != 0)
+        victim = (seat + robber_index % players) % players
         stolen = jax.nn.one_hot(chance.stolen, NUM_RESOURCES, dtype=jnp.int32) * steals
-        hand = hand.at[other].add(-stolen).at[seat].add(stolen)
+        hand = hand.at[victim].add(-stolen).at[seat].add(stolen)
         prompt = jnp.where(is_robber, PLAY_TURN, prompt)
 
         # ----- Development cards played
@@ -481,16 +509,15 @@ class CatanEnv:
         # Largest army
         knights = dev_played[seat, KNIGHT]
         holder = s.army_holder
+        holder_knights = s.dev_played[jnp.clip(holder, 0, players - 1), KNIGHT]
         takes_army = (
             is_knight
             & (knights >= 3)
-            & (
-                (holder < 0)
-                | ((holder != seat) & (s.dev_played[other, KNIGHT] < knights))
-            )
+            & ((holder < 0) | ((holder != seat) & (holder_knights < knights)))
         )
-        army_delta = jnp.zeros(2, jnp.int32).at[seat].set(2 * takes_army)
-        army_delta = army_delta.at[other].set(-2 * (takes_army & (holder == other)))
+        army_delta = 2 * takes_army * (seats == seat) - 2 * (
+            takes_army & (holder >= 0)
+        ) * (seats == holder)
         vp_public = vp_public + army_delta
         vp_actual = vp_actual + army_delta
         army_holder = jnp.where(takes_army, seat, holder)
@@ -500,9 +527,9 @@ class CatanEnv:
         hand = hand.at[seat].add(yop_cards)
         bank = bank - yop_cards
 
-        # Monopoly
-        taken = one_card * s.hand[other] * is_monopoly
-        hand = hand.at[other].add(-taken).at[seat].add(taken)
+        # Monopoly takes from every opponent.
+        taken = one_card * s.hand * ((seats != seat) & is_monopoly)[:, None]  # [P, 5]
+        hand = (hand - taken).at[seat].add(taken.sum(axis=0))
 
         # ----- Buy development card
         drawn_card = s.dev_deck[jnp.clip(s.dev_drawn, 0, len(DEV_DECK) - 1)]
@@ -560,30 +587,46 @@ class CatanEnv:
         hand = hand.at[seat].add(start_cards)
         bank = bank - start_cards
 
-        # Building on a node may cut the opponent's road (Board.build_settlement).
+        # Building on a node may cut opponents' roads (Board.build_settlement).
         reach = s.reach
         reach = reach.at[seat, settlement_node].set(
             reach[seat, settlement_node] | (is_settlement & is_initial)
         )
         edge_owner_pad = jnp.concatenate([s.edge_owner, jnp.full(1, -1, jnp.int32)])
         incident = edge_owner_pad[self.node_edges_pad[settlement_node]]
-        enemy_incident = (incident == other).sum()
-        cuts_end = paid_settlement & (enemy_incident == 1)
-        cuts_through = paid_settlement & (enemy_incident == 2)
-        reach = reach.at[other, settlement_node].set(
-            reach[other, settlement_node] & ~cuts_end
+        # [P] roads of each player at the node. The builder's own road is one of the
+        # node's three, so at most one opponent can be cut through.
+        incident_by_seat = (incident == seats[:, None]).sum(axis=1) * (seats != seat)
+        cuts_end = paid_settlement & (incident_by_seat == 1)
+        cut_through_by_seat = paid_settlement & (incident_by_seat == 2)
+        cuts_through = cut_through_by_seat.any()
+        cut_seat = jnp.where(cuts_through, jnp.argmax(cut_through_by_seat), next_seat)
+        reach = reach.at[:, settlement_node].set(reach[:, settlement_node] & ~cuts_end)
+        # Splitting a component re-walks both sides from the cut, as Board.dfs_walk
+        # does: it follows the cut player's roads and records nodes with someone
+        # else's building without walking past them. That records the new settlement
+        # too, which keeps it in the cut player's components.
+        cut_roads = s.edge_owner == cut_seat
+        walk_stops = (node_owner >= 0) & (node_owner != cut_seat)
+        road_ends = self.edges[:, 0], self.edges[:, 1]
+        starts = (
+            jnp.zeros(topo.num_nodes + 1, bool)
+            .at[self.node_neighbors_pad[settlement_node]]
+            .max(incident == cut_seat)[: topo.num_nodes]
         )
-        # Splitting a component re-walks it. As in Board.dfs_walk the walk records
-        # the cutting node too, which keeps it in the cut player's component.
-        enemy_roads = s.edge_owner == other
-        walked = (
-            jnp.zeros(topo.num_nodes, bool)
-            .at[self.edges[:, 0]]
-            .max(enemy_roads)
-            .at[self.edges[:, 1]]
-            .max(enemy_roads)
-        )
-        reach = reach.at[other].set(reach[other] | (walked & cuts_through))
+
+        def walk_step(_, visited):
+            passable = visited & ~walk_stops
+            a, b = road_ends
+            return (
+                visited.at[b]
+                .max(cut_roads & passable[a])
+                .at[a]
+                .max(cut_roads & passable[b])
+            )
+
+        walked = jax.lax.fori_loop(0, MAX_ROADS, walk_step, starts)
+        reach = reach.at[cut_seat].set(reach[cut_seat] | (walked & cuts_through))
 
         # ----- Road
         edge_a, edge_b = self.edges[edge, 0], self.edges[edge, 1]
@@ -611,14 +654,15 @@ class CatanEnv:
 
         # Initial-placement snake order (apply_build_road)
         placed_road = is_road & initial_road
-        total_settlements = 10 - settlements_left.sum()
-        forward = placed_road & (total_settlements < 2)
-        turnaround = placed_road & (total_settlements == 2)
-        finished = placed_road & (total_settlements == 4)
+        total_settlements = 5 * players - settlements_left.sum()
+        forward = placed_road & (total_settlements < players)
+        turnaround = placed_road & (total_settlements == players)
+        finished = placed_road & (total_settlements == 2 * players)
         backward = placed_road & ~forward & ~turnaround & ~finished
         moves_on = forward | backward
-        current = jnp.where(moves_on, other, current)
-        turn_player = jnp.where(moves_on, other, turn_player)
+        snake_seat = jnp.where(forward, next_seat, (seat - 1) % players)
+        current = jnp.where(moves_on, snake_seat, current)
+        turn_player = jnp.where(moves_on, snake_seat, turn_player)
         num_turns = num_turns + moves_on
         prompt = jnp.where(
             placed_road,
@@ -633,8 +677,8 @@ class CatanEnv:
         )
         played_dev = played_dev.at[seat].set(played_dev[seat] & ~is_end)
         has_rolled = has_rolled.at[seat].set(has_rolled[seat] & ~is_end)
-        current = jnp.where(is_end, other, current)
-        turn_player = jnp.where(is_end, other, turn_player)
+        current = jnp.where(is_end, next_seat, current)
+        turn_player = jnp.where(is_end, next_seat, turn_player)
         num_turns = num_turns + is_end
         prompt = jnp.where(is_end, PLAY_TURN, prompt)
 
@@ -643,7 +687,7 @@ class CatanEnv:
             ROAD_EVAL_BUILT,
             jnp.where(cuts_through, ROAD_EVAL_CUT, NO_ROAD_EVAL),
         )
-        road_eval_seat = jnp.where(is_road, seat, other)
+        road_eval_seat = jnp.where(is_road, seat, cut_seat)
 
         return s._replace(
             node_owner=node_owner,
@@ -681,8 +725,8 @@ class CatanEnv:
     # ===== Longest road
     def longest_road(self, edge_owner, node_owner, reach_seat, seat):
         """Length of the longest trail, as Board's longest_acyclic_path: walks only
-        friendly roads, cannot enter an enemy node, starts from any reach node."""
-        topo = self.topo
+        friendly roads, starts from any reach node, and ends at an enemy node (its
+        road counts, but the trail can't pass through it)."""
         own = edge_owner == seat
         bits = jnp.where(own, 1 << (jnp.cumsum(own) - 1), 0)
         bits = jnp.concatenate([bits, jnp.zeros(1, jnp.int32)])
@@ -697,11 +741,12 @@ class CatanEnv:
             node, used, alive, _, length = frontier
             step_bits = bits[self.node_edges_pad[node]]  # [F, 3]
             neighbors = self.node_neighbors_pad[node]  # [F, 3]
+            # All trails in the frontier have the same length: 0 at their starts
+            passable = alive & (~blocked[node] | (length == 0))
             ok = (
-                alive[:, None]
+                passable[:, None]
                 & (step_bits != 0)
                 & ((used[:, None] & step_bits) == 0)
-                & ~blocked[neighbors]
             )
             flat_ok = ok.ravel()
             index = jnp.nonzero(flat_ok, size=ROAD_FRONTIER, fill_value=0)[0]
@@ -737,15 +782,31 @@ class CatanEnv:
         takes = built & (length >= 5) & (length > s.road_best)
         holder = jnp.where(takes, seat, previous)
         best = jnp.where(takes, length, s.road_best)
-        # A cut re-awards the title to the longest network with no 5-road minimum.
-        # On a tie the seat that built first wins, which is always seat 0.
-        holder = jnp.where(cut, jnp.argmax(road_length), holder)
-        best = jnp.where(cut, road_length.max(), best)
+        # After a cut (Board._reassign_longest_road_after_cut): the holder keeps the
+        # card while tied for longest, else the only leader with 5+ takes it, else
+        # it is set aside.
+        last = self.num_players - 1
+        longest = road_length.max()
+        leaders = road_length == longest
+        holder_leads = (previous >= 0) & leaders[jnp.clip(previous, 0, last)]
+        after_cut = jnp.where(
+            longest < 5,
+            -1,
+            jnp.where(
+                holder_leads,
+                previous,
+                jnp.where(leaders.sum() == 1, jnp.argmax(road_length), -1),
+            ),
+        )
+        holder = jnp.where(cut, after_cut, holder)
+        best = jnp.where(cut, longest, best)
 
-        changed = (holder >= 0) & (holder != previous)
-        delta = jnp.zeros(2, jnp.int32)
-        delta = delta.at[jnp.clip(holder, 0, 1)].add(2 * changed)
-        delta = delta.at[jnp.clip(previous, 0, 1)].add(-2 * (changed & (previous >= 0)))
+        changed = holder != previous
+        delta = jnp.zeros(self.num_players, jnp.int32)
+        delta = delta.at[jnp.clip(holder, 0, last)].add(2 * (changed & (holder >= 0)))
+        delta = delta.at[jnp.clip(previous, 0, last)].add(
+            -2 * (changed & (previous >= 0))
+        )
         return s._replace(
             road_length=road_length,
             road_holder=holder,
@@ -788,12 +849,9 @@ class CatanEnv:
 
     # ===== Outcome
     def _finalize(self, s):
-        # Game.winning_color scans seats in order, so the later seat wins a tie.
-        winner = jnp.where(
-            s.vp_actual[1] >= self.vps_to_win,
-            1,
-            jnp.where(s.vp_actual[0] >= self.vps_to_win, 0, -1),
-        )
+        # As Game.winning_color: only the player whose turn it is can win.
+        reached = s.vp_actual[s.turn_player] >= self.vps_to_win
+        winner = jnp.where(reached, s.turn_player, -1)
         done = (
             (winner >= 0)
             | (s.num_turns >= self.turns_limit)
@@ -801,9 +859,23 @@ class CatanEnv:
         )
         return s._replace(winner=winner, done=done)
 
+    def potentials(self, s):
+        """[P] potentials for optional potential-based reward shaping: each seat's
+        VP lead over the average opponent. They sum to zero."""
+        vp = s.vp_actual.astype(jnp.float32)
+        others = (vp.sum() - vp) / (self.num_players - 1)
+        return self.shaping_vp * (vp - others)
+
     def potential(self, s):
-        """Seat-0 potential for optional potential-based reward shaping."""
-        return self.shaping_vp * (s.vp_actual[0] - s.vp_actual[1]).astype(jnp.float32)
+        """Seat 0's potential."""
+        return self.potentials(s)[0]
+
+    def terminal_rewards(self, winner):
+        """[P] rewards for a result: +1 for the winner, and the losers share -1, so
+        rewards sum to zero and equal players expect 0. A draw gives everyone 0."""
+        seats = jnp.arange(self.num_players)
+        loss = -1.0 / (self.num_players - 1)
+        return jnp.where(winner < 0, 0.0, jnp.where(seats == winner, 1.0, loss))
 
     # ===== Batched API
     def apply_chance(self, states, actions, chances):
@@ -823,21 +895,18 @@ class CatanEnv:
         batch = states.done.shape[0]
         k_chance, k_reset = jax.random.split(key)
         chances = jax.vmap(self.sample_chance)(
-            jax.random.split(k_chance, batch), states
+            jax.random.split(k_chance, batch), states, actions
         )
-        before = jax.vmap(self.potential)(states)
+        before = jax.vmap(self.potentials)(states)
         played = self.apply_chance(states, actions, chances)
-        after = jax.vmap(self.potential)(played)
+        after = jax.vmap(self.potentials)(played)
 
-        terminal = jnp.where(
-            played.winner == 0, 1.0, jnp.where(played.winner == 1, -1.0, 0.0)
-        )
-        seat0_reward = terminal + (after - before)
+        terminal = jax.vmap(self.terminal_rewards)(played.winner)
         info = StepInfo(
             done=played.done,
             winner=played.winner,
             plies=played.num_plies,
-            rewards=jnp.stack([seat0_reward, -seat0_reward], axis=1),
+            rewards=terminal + (after - before),
         )
 
         fresh = self.batch_reset(k_reset, batch)

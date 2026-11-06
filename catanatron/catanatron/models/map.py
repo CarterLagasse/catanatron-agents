@@ -373,6 +373,19 @@ def initialize_tiles(
         else:
             raise ValueError("Invalid tile")
 
+    # Fully random numbers, as in the rules' random set-up: the red numbers (6 and 8)
+    # must not be on adjacent hexes, so deal again until they aren't.
+    if number_placement == "random" and shuffled_numbers_param is None:
+        producing = [
+            tile
+            for tile in all_tiles.values()
+            if isinstance(tile, LandTile) and tile.resource is not None
+        ]
+        while _red_numbers_adjacent(producing):
+            numbers = random.sample(map_template.numbers, len(map_template.numbers))
+            for tile, number in zip(producing, numbers):
+                tile.number = number
+
     # If asked for numbers in official spiral, override the numbers.
     if number_placement == "official_spiral":
         if shuffled_numbers_param is not None:
@@ -394,6 +407,12 @@ def initialize_tiles(
             tile.number = BASE_NUMBERS_IN_SPIRAL_ORDER[i]
             i += 1
     return all_tiles
+
+
+def _red_numbers_adjacent(tiles) -> bool:
+    reds = [set(tile.nodes.values()) for tile in tiles if tile.number in (6, 8)]
+    # Adjacent hexes share an edge, i.e. 2 nodes
+    return any(len(a & b) >= 2 for i, a in enumerate(reds) for b in reds[i + 1 :])
 
 
 def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):

@@ -12,6 +12,8 @@ the missing games are played.
 An agent is NAME=PATH, with :1 for greedy play, or NAME=bot:CODE for an engine bot.
 An opponent is SPEC=GAMES, using CLI player codes, e.g. JAX:runs/ppo/best.npz:1=2000.
 A control such as F against F must come out near 50%: if not, the harness is biased.
+
+With --num-players 3 or 4 the opponent fills every other seat, and even is 1/3 or 1/4.
 """
 
 import argparse
@@ -58,7 +60,9 @@ def verdict(low, high, even=0.5):
     return "not separated"
 
 
-def write_report(run_dir, agents, opponents, results):
+def write_report(run_dir, agents, opponents, results, num_players=2):
+    even = 1.0 / num_players
+    seats = " / ".join(str(i) for i in range(num_players))
     lines = [
         "# Tournament results",
         "",
@@ -66,17 +70,20 @@ def write_report(run_dir, agents, opponents, results):
         "seeds for differences. *not separated* means the interval includes even, so "
         "the games played cannot tell the two sides apart.",
         "",
-        "| Agent | Opponent | Games | Wins | Draws | Win rate | 95% CI | Against 50% "
-        "| Seat 0 / 1 | Mean VPs |",
+        f"| Agent | Opponent | Games | Wins | Draws | Win rate | 95% CI | Against {even:.0%} "
+        f"| Seat {seats} | Mean VPs |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for (agent, opponent), records in results.items():
         r = summarize(records)
+        by_seat = " / ".join(
+            f"{r.get(f'seat{i}_win_rate', 0.0):.1%}" for i in range(num_players)
+        )
         lines.append(
             f"| {agent} | {opponent} | {r['games']} | {r['wins']} | {r['draws']} "
             f"| {r['win_rate']:.1%} | {r['ci_low']:.1%} to {r['ci_high']:.1%} "
-            f"| {verdict(r['ci_low'], r['ci_high'])} "
-            f"| {r['seat0_win_rate']:.1%} / {r['seat1_win_rate']:.1%} | {r['mean_vps']:.2f} |"
+            f"| {verdict(r['ci_low'], r['ci_high'], even)} "
+            f"| {by_seat} | {r['mean_vps']:.2f} |"
         )
 
     names = list(agents)
@@ -130,6 +137,7 @@ def main():
     parser.add_argument("--vs", action="append", required=True, help="SPEC=GAMES")
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--map-type", default="BASE")
+    parser.add_argument("--num-players", type=int, default=2, choices=[2, 3, 4])
     parser.add_argument("--seed", type=int, default=100_000)
     args = parser.parse_args()
 
@@ -155,6 +163,7 @@ def main():
                     args.map_type,
                     args.seed,
                     records_path,
+                    num_players=args.num_players,
                 )
                 r = summarize(results[name, opponent])
                 print(
@@ -162,7 +171,7 @@ def main():
                     f"({r['ci_low']:.1%} to {r['ci_high']:.1%})",
                     flush=True,
                 )
-                write_report(run_dir, agents, opponents, results)
+                write_report(run_dir, agents, opponents, results, args.num_players)
 
 
 if __name__ == "__main__":

@@ -6,9 +6,9 @@ player's turn), so a tick's reward cannot be paired with the next tick's value.
 `compute_gae` instead follows each seat's own decision chain within each game.
 
 Each game belongs to a group:
-    self:     both seats play the current network and both generate training data
-    pool:     the learner plays one random seat against a frozen network
-    scripted: the learner plays one random seat against a scripted bot
+    self:     every seat plays the current network and generates training data
+    pool:     the learner plays one random seat, a frozen network all the others
+    scripted: the learner plays one random seat, a scripted bot all the others
 
 Train:
     python -m catanatron.jax_rl.ppo --run-dir runs/ppo --timesteps 50000000
@@ -31,7 +31,7 @@ from catanatron.jax_rl import checkpoint
 from catanatron.jax_rl.bots import HEURISTIC, RANDOM, WEIGHTED, scripted_logits
 from catanatron.jax_rl.env import CatanEnv, pack_states, unpack_states
 from catanatron.jax_rl.evaluate import Arena
-from catanatron.jax_rl.network import GraphPolicy, masked_log_probs
+from catanatron.jax_rl.network import GraphPolicy, adapt_params, masked_log_probs
 from catanatron.jax_rl.obs import encode, encode_current
 
 # opponent_code values for one game
@@ -42,6 +42,7 @@ OPPONENT_SELF, OPPONENT_POOL = -1, 3  # scripted kinds use bots.RANDOM..HEURISTI
 class PPOConfig:
     map_type: str = "BASE"
     vps_to_win: int = 10
+    num_players: int = 2
     num_envs: int = 256
     rollout_ticks: int = 128
     # Group sizes as fractions of num_envs. Whatever remains is self-play.
@@ -98,7 +99,7 @@ class PPOConfig:
     @property
     def expected_learner_fraction(self):
         return (
-            self.num_self + 0.5 * (self.num_pool + self.num_scripted)
+            self.num_self + (self.num_pool + self.num_scripted) / self.num_players
         ) / self.num_envs
 
 
@@ -109,7 +110,7 @@ class Transition(NamedTuple):
     action: jnp.ndarray
     log_prob: jnp.ndarray
     value: jnp.ndarray
-    rewards: jnp.ndarray  # [2]
+    rewards: jnp.ndarray  # [P]
     done: jnp.ndarray
 
 
@@ -124,7 +125,10 @@ class Trainer:
     def __init__(self, config):
         self.config = config
         self.env = CatanEnv(
-            config.map_type, vps_to_win=config.vps_to_win, shaping_vp=config.shaping_vp
+            config.map_type,
+            vps_to_win=config.vps_to_win,
+            num_players=config.num_players,
+            shaping_vp=config.shaping_vp,
         )
         self.policy = GraphPolicy(self.env, config.hidden, config.rounds)
 
@@ -156,13 +160,16 @@ class Trainer:
     def init_params(self, key):
         return self.policy.init(key)
 
+    def random_seats(self, key, shape):
+        if self.config.num_players == 2:  # the 1v1 draws, so old runs reproduce
+            return jax.random.bernoulli(key, 0.5, shape).astype(jnp.int32)
+        return jax.random.randint(key, shape, 0, self.config.num_players)
+
     def init_carry(self, key):
         k_states, k_seats = jax.random.split(key)
         return Carry(
             states=self.env.batch_reset(k_states, self.config.num_envs),
-            learner_seat=jax.random.bernoulli(
-                k_seats, 0.5, (self.config.num_envs,)
-            ).astype(jnp.int32),
+            learner_seat=self.random_seats(k_seats, (self.config.num_envs,)),
         )
 
     def scripted_codes(self, key):
@@ -258,9 +265,7 @@ class Trainer:
             )[:, 0]
             next_states, info = env.batch_step(k_env, states, final_actions)
             # Each new game gets a fresh random seat for the learner.
-            new_seats = jax.random.bernoulli(
-                k_seats, 0.5, carry.learner_seat.shape
-            ).astype(jnp.int32)
+            new_seats = self.random_seats(k_seats, carry.learner_seat.shape)
             learner_seat = jnp.where(info.done, new_seats, carry.learner_seat)
 
             transition = Transition(
@@ -284,11 +289,11 @@ class Trainer:
         keys = jax.random.split(key, c.rollout_ticks)
         carry, (transitions, metrics) = jax.lax.scan(tick, carry, keys)
 
-        # Bootstrap: value of the final positions from both seats' perspectives.
+        # Bootstrap: value of the final positions from every seat's perspective.
         def seat_values(state):
             return jax.vmap(
                 lambda seat: policy.apply(params, encode(env, state, seat))[1]
-            )(jnp.arange(2))
+            )(jnp.arange(c.num_players))
 
         last_values = jax.vmap(seat_values)(carry.states)
         return carry, transitions, last_values, metrics
@@ -304,7 +309,7 @@ class Trainer:
         c = self.config
 
         def backward(carry, t):
-            next_value, next_advantage, pending = carry  # each [B, 2]
+            next_value, next_advantage, pending = carry  # each [B, P]
             alive = (1.0 - t.done.astype(jnp.float32))[:, None]
             next_value = next_value * alive
             next_advantage = next_advantage * alive
@@ -550,6 +555,20 @@ def sample_pool(trainer, pool, params, rng):
     return trainer.stack_segments(members, params)
 
 
+def load_init_params(path, num_players):
+    """Loads a warm start, widening a 1v1 checkpoint for more players."""
+    params, meta = checkpoint.load_params(path)
+    trained_for = meta.get("num_players", 2)
+    if trained_for == num_players:
+        return params
+    if trained_for != 2:
+        raise ValueError(
+            f"{path} plays {trained_for}-player games; only 1v1 checkpoints can be "
+            f"widened to {num_players} players"
+        )
+    return adapt_params(params, num_players)
+
+
 def _save_resume_state(run_dir, **state):
     """Everything needed to continue a run. Games in progress are simply restarted."""
     state = jax.tree_util.tree_map(np.asarray, state)
@@ -691,6 +710,7 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
                     config.hidden,
                     config.rounds,
                     config.map_type,
+                    config.num_players,
                 )
                 checkpoint.save_params(
                     run_dir / "snapshots" / f"it_{iteration:05d}.npz",
@@ -698,6 +718,7 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
                     config.hidden,
                     config.rounds,
                     config.map_type,
+                    config.num_players,
                 )
                 if score["heuristic"]["win_rate"] >= best_score:
                     best_score = score["heuristic"]["win_rate"]
@@ -707,6 +728,7 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
                         config.hidden,
                         config.rounds,
                         config.map_type,
+                        config.num_players,
                     )
 
             # The row goes first so saved state never gets ahead of the metrics file.
@@ -728,7 +750,12 @@ def train(config, run_dir, log=print, init_params=None, resume=False):
                 log(_format_row(row))
 
     checkpoint.save_params(
-        run_dir / "latest.npz", params, config.hidden, config.rounds, config.map_type
+        run_dir / "latest.npz",
+        params,
+        config.hidden,
+        config.rounds,
+        config.map_type,
+        config.num_players,
     )
     return params
 
@@ -767,6 +794,13 @@ def main():
     parser.add_argument(
         "--map-type", default="BASE", choices=["BASE", "MINI", "TOURNAMENT"]
     )
+    parser.add_argument(
+        "--num-players",
+        type=int,
+        default=PPOConfig.num_players,
+        choices=[2, 3, 4],
+        help="players per game; 4 matches the JSettlers benchmark",
+    )
     parser.add_argument("--timesteps", type=int, default=PPOConfig.total_timesteps)
     parser.add_argument("--num-envs", type=int, default=PPOConfig.num_envs)
     parser.add_argument("--rollout-ticks", type=int, default=PPOConfig.rollout_ticks)
@@ -783,7 +817,9 @@ def main():
     parser.add_argument("--eval-every", type=int, default=PPOConfig.eval_every)
     parser.add_argument("--eval-envs", type=int, default=PPOConfig.eval_envs)
     parser.add_argument(
-        "--init-from", default=None, help="checkpoint to warm start from"
+        "--init-from",
+        default=None,
+        help="checkpoint to warm start from; a 1v1 one is widened for more players",
     )
     parser.add_argument(
         "--resume", action="store_true", help="continue the run in --run-dir"
@@ -793,6 +829,7 @@ def main():
 
     config = PPOConfig(
         map_type=args.map_type,
+        num_players=args.num_players,
         total_timesteps=args.timesteps,
         num_envs=args.num_envs,
         rollout_ticks=args.rollout_ticks,
@@ -811,7 +848,7 @@ def main():
     )
     init_params = None
     if args.init_from:
-        init_params = checkpoint.load_params(args.init_from)[0]
+        init_params = load_init_params(args.init_from, config.num_players)
     train(config, args.run_dir, init_params=init_params, resume=args.resume)
 
 

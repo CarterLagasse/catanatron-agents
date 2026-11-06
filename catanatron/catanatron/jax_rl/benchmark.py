@@ -29,8 +29,8 @@ def _timed(fn, repeats=5):
     return best
 
 
-def measure(num_envs, hidden, rounds, iterations=2):
-    env = CatanEnv("BASE")
+def measure(num_envs, hidden, rounds, iterations=2, num_players=2):
+    env = CatanEnv("BASE", num_players=num_players)
     policy = GraphPolicy(env, hidden, rounds)
     key = jax.random.PRNGKey(0)
     params = policy.init(key)
@@ -59,6 +59,7 @@ def measure(num_envs, hidden, rounds, iterations=2):
     }
 
     config = PPOConfig(
+        num_players=num_players,
         num_envs=num_envs,
         hidden=hidden,
         rounds=rounds,
@@ -105,8 +106,12 @@ def main():
     parser.add_argument("--num-envs", type=int, default=PPOConfig.num_envs)
     parser.add_argument("--hidden", type=int, default=PPOConfig.hidden)
     parser.add_argument("--rounds", type=int, default=PPOConfig.rounds)
+    parser.add_argument("--num-players", type=int, default=2, choices=[2, 3, 4])
     args = parser.parse_args()
-    for name, value in measure(args.num_envs, args.hidden, args.rounds).items():
+    results = measure(
+        args.num_envs, args.hidden, args.rounds, num_players=args.num_players
+    )
+    for name, value in results.items():
         print(
             f"{name}: {value:.1f}" if isinstance(value, float) else f"{name}: {value}"
         )

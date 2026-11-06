@@ -121,6 +121,25 @@ CLI_PLAYERS.append(
 )
 
 
+def _hexmachina_import_fn(color, *args):
+    # Imported lazily: the first use downloads the evolved player files.
+    from catanatron.sota.hexmachina import HexMachinaPlayer
+
+    return HexMachinaPlayer(color, *args)
+
+
+CLI_PLAYERS.append(
+    CliPlayer(
+        "HM",
+        "HexMachinaPlayer",
+        'LLM-evolved player from "Agents of Change" (arXiv:2506.04651). '
+        "Params: VARIANT (gpt/mistral/claude; paper win rate vs AB 54%/49%/38%), VERBOSE(1/0). "
+        "E.g. HM:gpt",
+        _hexmachina_import_fn,
+    )
+)
+
+
 def parse_cli_string(player_string):
     players = []
     player_keys = player_string.split(",")
